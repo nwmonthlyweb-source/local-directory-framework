@@ -33,18 +33,33 @@ add_action(
  */
 function nwmd_directory_get_period_label($period_key) {
 
-    $date = DateTime::createFromFormat(
+    $timezone = wp_timezone();
+
+    $date = DateTimeImmutable::createFromFormat(
         '!Y-m',
-        $period_key
+        $period_key,
+        $timezone
     );
 
-    if (!$date instanceof DateTime) {
+    $errors = DateTimeImmutable::getLastErrors();
+
+    if (
+        !$date instanceof DateTimeImmutable ||
+        (
+            is_array($errors) &&
+            (
+                $errors['warning_count'] > 0 ||
+                $errors['error_count'] > 0
+            )
+        )
+    ) {
         return '';
     }
 
     return wp_date(
         'F Y',
-        $date->getTimestamp()
+        $date->getTimestamp(),
+        $timezone
     );
 }
 
@@ -134,7 +149,7 @@ function nwmd_directory_save_ranking_period() {
             '%s',
             '%s',
             '%s',
-            null,
+            '%s',
             '%d',
             '%s',
             '%s',
