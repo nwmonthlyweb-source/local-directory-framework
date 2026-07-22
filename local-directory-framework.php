@@ -67,6 +67,7 @@ function nwmd_directory_maybe_upgrade() {
 }
 
 add_action(
-    'plugins_loaded',
-    'nwmd_directory_maybe_upgrade'
+    'init',
+    'nwmd_directory_maybe_upgrade',
+    20
 );
