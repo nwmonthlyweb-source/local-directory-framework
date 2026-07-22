@@ -220,3 +220,103 @@
         padding: 20px;
     }
 }
+/* Directory archive filters. */
+.nwmd-directory-filters {
+    margin-bottom: 32px;
+    padding: 24px;
+    border: 1px solid #dbe4f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.nwmd-directory-filters__fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.nwmd-directory-filters__field {
+    display: grid;
+    gap: 7px;
+    color: #172033;
+    font-weight: 700;
+}
+
+.nwmd-directory-filters__field select {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid #cbd7e6;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #172033;
+    font: inherit;
+    font-weight: 400;
+}
+
+.nwmd-directory-filters__field select:focus {
+    border-color: #2563eb;
+    outline: 2px solid rgba(37, 99, 235, 0.2);
+    outline-offset: 1px;
+}
+
+.nwmd-directory-filters__actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.nwmd-directory-filters__submit {
+    min-height: 44px;
+    padding: 10px 20px;
+    border: 1px solid #2563eb;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #ffffff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.nwmd-directory-filters__submit:hover,
+.nwmd-directory-filters__submit:focus {
+    border-color: #1d4ed8;
+    background: #1d4ed8;
+    color: #ffffff;
+}
+
+.nwmd-directory-filters__clear {
+    color: #34435b;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.nwmd-directory-filters__clear:hover,
+.nwmd-directory-filters__clear:focus {
+    color: #172033;
+    text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+    .nwmd-directory-filters {
+        padding: 20px;
+    }
+
+    .nwmd-directory-filters__fields {
+        grid-template-columns: 1fr;
+    }
+
+    .nwmd-directory-filters__actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .nwmd-directory-filters__submit {
+        width: 100%;
+    }
+
+    .nwmd-directory-filters__clear {
+        text-align: center;
+    }
+}

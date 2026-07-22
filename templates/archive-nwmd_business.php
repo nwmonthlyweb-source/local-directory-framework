@@ -10,6 +10,42 @@ $archive_title = post_type_archive_title(
     '',
     false
 );
+
+$archive_url = get_post_type_archive_link(
+    'nwmd_business'
+);
+
+$current_category = nwmd_directory_get_archive_filter_value(
+    'filter_category'
+);
+
+$current_specialty = nwmd_directory_get_archive_filter_value(
+    'filter_specialty'
+);
+
+$current_city = nwmd_directory_get_archive_filter_value(
+    'filter_city'
+);
+
+$category_terms = nwmd_directory_get_archive_filter_terms(
+    'nwmd_category'
+);
+
+$specialty_terms = nwmd_directory_get_archive_filter_terms(
+    'nwmd_specialty'
+);
+
+$city_terms = nwmd_directory_get_archive_filter_terms(
+    'nwmd_city'
+);
+
+$active_filters = array_filter(
+    [
+        'filter_category'  => $current_category,
+        'filter_specialty' => $current_specialty,
+        'filter_city'      => $current_city,
+    ]
+);
 ?>
 
 <main class="nwmd-directory" id="primary">
@@ -26,6 +62,97 @@ $archive_title = post_type_archive_title(
             <?php echo esc_html__('Discover local businesses serving Portland and nearby Oregon communities.', 'local-directory-framework'); ?>
         </p>
     </section>
+
+    <?php if (!empty($archive_url)) : ?>
+        <form
+            class="nwmd-directory-filters"
+            action="<?php echo esc_url($archive_url); ?>"
+            method="get"
+        >
+            <div class="nwmd-directory-filters__fields">
+                <label class="nwmd-directory-filters__field">
+                    <span>
+                        <?php echo esc_html__('Category', 'local-directory-framework'); ?>
+                    </span>
+
+                    <select name="filter_category">
+                        <option value="">
+                            <?php echo esc_html__('All Categories', 'local-directory-framework'); ?>
+                        </option>
+
+                        <?php foreach ($category_terms as $term) : ?>
+                            <option
+                                value="<?php echo esc_attr($term->slug); ?>"
+                                <?php selected($current_category, $term->slug); ?>
+                            >
+                                <?php echo esc_html($term->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+
+                <label class="nwmd-directory-filters__field">
+                    <span>
+                        <?php echo esc_html__('Specialty', 'local-directory-framework'); ?>
+                    </span>
+
+                    <select name="filter_specialty">
+                        <option value="">
+                            <?php echo esc_html__('All Specialties', 'local-directory-framework'); ?>
+                        </option>
+
+                        <?php foreach ($specialty_terms as $term) : ?>
+                            <option
+                                value="<?php echo esc_attr($term->slug); ?>"
+                                <?php selected($current_specialty, $term->slug); ?>
+                            >
+                                <?php echo esc_html($term->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+
+                <label class="nwmd-directory-filters__field">
+                    <span>
+                        <?php echo esc_html__('City', 'local-directory-framework'); ?>
+                    </span>
+
+                    <select name="filter_city">
+                        <option value="">
+                            <?php echo esc_html__('All Cities', 'local-directory-framework'); ?>
+                        </option>
+
+                        <?php foreach ($city_terms as $term) : ?>
+                            <option
+                                value="<?php echo esc_attr($term->slug); ?>"
+                                <?php selected($current_city, $term->slug); ?>
+                            >
+                                <?php echo esc_html($term->name); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            </div>
+
+            <div class="nwmd-directory-filters__actions">
+                <button
+                    class="nwmd-directory-filters__submit"
+                    type="submit"
+                >
+                    <?php echo esc_html__('Apply Filters', 'local-directory-framework'); ?>
+                </button>
+
+                <?php if (!empty($active_filters)) : ?>
+                    <a
+                        class="nwmd-directory-filters__clear"
+                        href="<?php echo esc_url($archive_url); ?>"
+                    >
+                        <?php echo esc_html__('Clear Filters', 'local-directory-framework'); ?>
+                    </a>
+                <?php endif; ?>
+            </div>
+        </form>
+    <?php endif; ?>
 
     <?php if (have_posts()) : ?>
 
@@ -124,6 +251,7 @@ $archive_title = post_type_archive_title(
                     'mid_size'  => 1,
                     'prev_text' => esc_html__('Previous', 'local-directory-framework'),
                     'next_text' => esc_html__('Next', 'local-directory-framework'),
+                    'add_args'  => $active_filters,
                 ]
             );
             ?>
@@ -133,11 +261,23 @@ $archive_title = post_type_archive_title(
 
         <div class="nwmd-directory__empty">
             <h2>
-                <?php echo esc_html__('No published businesses yet.', 'local-directory-framework'); ?>
+                <?php
+                echo esc_html(
+                    !empty($active_filters)
+                        ? __('No businesses matched these filters.', 'local-directory-framework')
+                        : __('No published businesses yet.', 'local-directory-framework')
+                );
+                ?>
             </h2>
 
             <p>
-                <?php echo esc_html__('Published business profiles will appear here.', 'local-directory-framework'); ?>
+                <?php
+                echo esc_html(
+                    !empty($active_filters)
+                        ? __('Try changing or clearing the selected filters.', 'local-directory-framework')
+                        : __('Published business profiles will appear here.', 'local-directory-framework')
+                );
+                ?>
             </p>
         </div>
 

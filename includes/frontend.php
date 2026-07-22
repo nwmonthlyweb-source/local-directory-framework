@@ -108,3 +108,130 @@ function nwmd_directory_get_business_term_names($post_id, $taxonomy) {
         )
     );
 }
+
+/**
+ * Return one sanitized archive filter value.
+ *
+ * @param string $key Filter query-string key.
+ *
+ * @return string
+ */
+function nwmd_directory_get_archive_filter_value($key) {
+
+    $allowed_keys = [
+        'filter_category',
+        'filter_specialty',
+        'filter_city',
+    ];
+
+    if (
+        !in_array($key, $allowed_keys, true) ||
+        !isset($_GET[$key]) ||
+        !is_string($_GET[$key])
+    ) {
+        return '';
+    }
+
+    return sanitize_title(
+        wp_unslash($_GET[$key])
+    );
+}
+
+/**
+ * Return selectable terms that have published businesses.
+ *
+ * @param string $taxonomy Directory taxonomy.
+ *
+ * @return array
+ */
+function nwmd_directory_get_archive_filter_terms($taxonomy) {
+
+    if (!taxonomy_exists($taxonomy)) {
+        return [];
+    }
+
+    $terms = get_terms(
+        [
+            'taxonomy'   => $taxonomy,
+            'hide_empty' => true,
+            'orderby'    => 'name',
+            'order'      => 'ASC',
+        ]
+    );
+
+    if (is_wp_error($terms)) {
+        return [];
+    }
+
+    return $terms;
+}
+
+/**
+ * Filter the public business archive.
+ *
+ * @param WP_Query $query Current WordPress query.
+ */
+function nwmd_directory_filter_archive_query($query) {
+
+    if (
+        is_admin() ||
+        !$query->is_main_query() ||
+        !$query->is_post_type_archive('nwmd_business')
+    ) {
+        return;
+    }
+
+    $filters = [
+        'filter_category'  => 'nwmd_category',
+        'filter_specialty' => 'nwmd_specialty',
+        'filter_city'      => 'nwmd_city',
+    ];
+
+    $tax_query = [];
+
+    foreach ($filters as $filter_key => $taxonomy) {
+
+        $slug = nwmd_directory_get_archive_filter_value(
+            $filter_key
+        );
+
+        if ('' === $slug) {
+            continue;
+        }
+
+        $term = get_term_by(
+            'slug',
+            $slug,
+            $taxonomy
+        );
+
+        if (!$term instanceof WP_Term) {
+            continue;
+        }
+
+        $tax_query[] = [
+            'taxonomy' => $taxonomy,
+            'field'    => 'slug',
+            'terms'    => [$slug],
+        ];
+    }
+
+    if (empty($tax_query)) {
+        return;
+    }
+
+    if (count($tax_query) > 1) {
+        $tax_query['relation'] = 'AND';
+    }
+
+    $query->set(
+        'tax_query',
+        $tax_query
+    );
+}
+
+add_action(
+    'pre_get_posts',
+    'nwmd_directory_filter_archive_query',
+    20
+);
