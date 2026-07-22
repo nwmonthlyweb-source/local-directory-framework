@@ -1,0 +1,222 @@
+.nwmd-directory {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 56px 0 72px;
+    color: #172033;
+}
+
+.nwmd-directory__intro {
+    max-width: 760px;
+    margin-bottom: 36px;
+}
+
+.nwmd-directory__eyebrow,
+.nwmd-business-card__category {
+    margin: 0 0 8px;
+    color: #2563eb;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.nwmd-directory__title {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1.08;
+}
+
+.nwmd-directory__description {
+    max-width: 680px;
+    margin: 16px 0 0;
+    color: #526078;
+    font-size: 1.125rem;
+}
+
+.nwmd-directory__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.nwmd-business-card {
+    overflow: hidden;
+    border: 1px solid #dbe4f0;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.nwmd-business-card__image {
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    background: #eef4fb;
+}
+
+.nwmd-business-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nwmd-business-card__content {
+    padding: 24px;
+}
+
+.nwmd-business-card__title {
+    margin: 0;
+    font-size: 1.4rem;
+    line-height: 1.25;
+}
+
+.nwmd-business-card__title a {
+    color: #172033;
+    text-decoration: none;
+}
+
+.nwmd-business-card__title a:hover,
+.nwmd-business-card__title a:focus {
+    color: #2563eb;
+}
+
+.nwmd-business-card__location {
+    margin: 10px 0 0;
+    color: #526078;
+    font-weight: 600;
+}
+
+.nwmd-business-card__excerpt {
+    margin: 16px 0 20px;
+    color: #526078;
+}
+
+.nwmd-business-card__link,
+.nwmd-business-profile__back {
+    color: #2563eb;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.nwmd-business-card__link:hover,
+.nwmd-business-card__link:focus,
+.nwmd-business-profile__back:hover,
+.nwmd-business-profile__back:focus {
+    text-decoration: underline;
+}
+
+.nwmd-directory__pagination {
+    margin-top: 40px;
+}
+
+.nwmd-directory__empty {
+    padding: 32px;
+    border: 1px solid #dbe4f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.nwmd-directory__empty h2,
+.nwmd-directory__empty p {
+    margin-top: 0;
+}
+
+.nwmd-directory__empty p {
+    margin-bottom: 0;
+    color: #526078;
+}
+
+.nwmd-business-profile {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.nwmd-business-profile__back {
+    display: inline-block;
+    margin-bottom: 28px;
+}
+
+.nwmd-business-profile__header {
+    max-width: 760px;
+}
+
+.nwmd-business-profile__legal-name {
+    margin: 12px 0 0;
+    color: #526078;
+    font-size: 1.05rem;
+}
+
+.nwmd-business-profile__image {
+    margin-top: 32px;
+    overflow: hidden;
+    border-radius: 18px;
+}
+
+.nwmd-business-profile__image img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.nwmd-business-profile__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+    gap: 48px;
+    margin-top: 40px;
+}
+
+.nwmd-business-profile__content {
+    font-size: 1.05rem;
+}
+
+.nwmd-business-profile__details {
+    align-self: start;
+    padding: 24px;
+    border: 1px solid #dbe4f0;
+    border-radius: 16px;
+    background: #f8fafc;
+}
+
+.nwmd-business-profile__details h2 {
+    margin-top: 0;
+}
+
+.nwmd-business-profile__detail + .nwmd-business-profile__detail {
+    margin-top: 24px;
+}
+
+.nwmd-business-profile__detail h3 {
+    margin: 0 0 6px;
+    font-size: 1rem;
+}
+
+.nwmd-business-profile__detail p {
+    margin: 0;
+    color: #526078;
+}
+
+@media (max-width: 900px) {
+    .nwmd-directory__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .nwmd-business-profile__layout {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+}
+
+@media (max-width: 620px) {
+    .nwmd-directory {
+        width: min(100% - 24px, 1180px);
+        padding: 36px 0 56px;
+    }
+
+    .nwmd-directory__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nwmd-business-card__content,
+    .nwmd-business-profile__details {
+        padding: 20px;
+    }
+}
