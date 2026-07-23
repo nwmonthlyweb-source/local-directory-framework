@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Local Directory Framework
  * Description: Structured local business directory, monthly rankings, business requests, and advertising management.
- * Version: 0.1.10
+ * Version: 0.1.11
  * Author: Northwest Monthly
  * Text Domain: local-directory-framework
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('NWMD_DIRECTORY_VERSION', '0.1.10');
+define('NWMD_DIRECTORY_VERSION', '0.1.11');
 define('NWMD_DIRECTORY_PATH', plugin_dir_path(__FILE__));
 define('NWMD_DIRECTORY_URL', plugin_dir_url(__FILE__));
 
@@ -21,6 +21,7 @@ require_once NWMD_DIRECTORY_PATH . 'includes/demo-data.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/database-schema.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-details.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-index.php';
+require_once NWMD_DIRECTORY_PATH . 'includes/business-sources-admin.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/frontend.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/rankings-admin.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/ranking-entries-admin.php';
