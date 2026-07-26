@@ -2,7 +2,8 @@
 
 ## Release
 
-Planned for Local Directory Framework 0.1.12.
+- CSV template and complete-file validation: 0.1.12
+- Draft creation, index synchronization, source creation, and rollback: 0.1.13
 
 ## Purpose
 
@@ -16,6 +17,14 @@ Businesses → CSV Import
 Required capability:
 
 - manage_options
+
+## Admin Workflow
+
+1. Download and complete the official CSV template.
+2. Select the CSV in Businesses → CSV Import.
+3. Use Validate CSV to check the file without changing records.
+4. Use Import CSV to validate again and create the complete batch.
+5. Review the new Business drafts before publishing.
 
 ## Import Safety
 
