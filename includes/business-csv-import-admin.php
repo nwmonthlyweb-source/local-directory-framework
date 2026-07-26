@@ -113,27 +113,7 @@ function nwmd_directory_render_business_csv_import_page() {
             ?>
         </p>
 
-        <?php nwmd_directory_render_business_csv_validation_result(); ?>
-
-        <div class="notice notice-info inline">
-            <p>
-                <strong>
-                    <?php
-                    echo esc_html__(
-                        'Validation mode:',
-                        'local-directory-framework'
-                    );
-                    ?>
-                </strong>
-
-                <?php
-                echo esc_html__(
-                    'CSV validation is active. Record creation remains disabled until the import and rollback phase is complete.',
-                    'local-directory-framework'
-                );
-                ?>
-            </p>
-        </div>
+        <?php nwmd_directory_render_business_csv_process_result(); ?>
 
         <div class="card" style="max-width: 900px;">
             <h2>
@@ -187,7 +167,7 @@ function nwmd_directory_render_business_csv_import_page() {
                 <input
                     type="hidden"
                     name="action"
-                    value="nwmd_validate_business_csv"
+                    value="nwmd_process_business_csv"
                 >
                 <?php
                 wp_nonce_field(
@@ -230,11 +210,33 @@ function nwmd_directory_render_business_csv_import_page() {
                 <p>
                     <button
                         type="submit"
-                        class="button button-primary"
+                        name="nwmd_business_csv_operation"
+                        value="validate"
+                        class="button button-secondary"
                     >
                         <?php
                         echo esc_html__(
                             'Validate CSV',
+                            'local-directory-framework'
+                        );
+                        ?>
+                    </button>
+
+                    <button
+                        type="submit"
+                        name="nwmd_business_csv_operation"
+                        value="import"
+                        class="button button-primary"
+                        onclick="return confirm('<?php echo esc_js(
+                            __(
+                                'Import every valid row as a new draft business?',
+                                'local-directory-framework'
+                            )
+                        ); ?>');"
+                    >
+                        <?php
+                        echo esc_html__(
+                            'Import CSV',
                             'local-directory-framework'
                         );
                         ?>
@@ -244,7 +246,7 @@ function nwmd_directory_render_business_csv_import_page() {
                 <p class="description">
                     <?php
                     echo esc_html__(
-                        'Validation checks the complete file and does not create or modify records.',
+                        'Import validates the complete file first. No records are created when validation fails.',
                         'local-directory-framework'
                     );
                     ?>
