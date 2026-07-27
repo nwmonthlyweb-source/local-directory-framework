@@ -12,7 +12,8 @@ function nwmd_directory_enqueue_frontend_assets() {
     if (
         !is_post_type_archive('nwmd_business') &&
         !is_singular('nwmd_business') &&
-        !nwmd_directory_is_business_request_page()
+        !nwmd_directory_is_business_request_page() &&
+        !nwmd_directory_is_public_rankings_page()
     ) {
         return;
     }

@@ -206,6 +206,15 @@ Required indexes:
 - status
 - published_at
 
+Publication rules:
+
+- Draft periods may move to Review.
+- Review periods may return to Draft or be Published.
+- Publishing requires at least one entry and published Business profiles.
+- Publishing archives any previously published period.
+- Published and archived periods are read-only.
+- The newest published period is the only public ranking snapshot.
+
 ### wp_nwmd_ranking_entries
 
 Purpose:
@@ -361,11 +370,16 @@ Public result pages must not calculate rankings in real time.
 
 A result page reads the published monthly snapshot:
 
-1. Find the current published ranking period.
+1. Find the newest ranking period with `published` status.
 2. Match state, city, category, and specialty.
-3. Read no more than 10 ranking entries.
-4. Load the related business profiles.
-5. Cache the complete rendered page.
+3. Read no more than 10 entries ordered by saved rank position.
+4. Require each related Business profile to remain published.
+5. Load the related business profiles.
+6. Cache the complete rendered page.
+
+The initial public route is:
+
+`/top-businesses/`
 
 ## Advertising Rules
 

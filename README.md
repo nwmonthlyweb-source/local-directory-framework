@@ -29,13 +29,18 @@ Intro → Category → State → City → Specialty → Top 10 Results → Busin
 - Lake Oswego
 - Gresham
 
+## Current Release
+
+Version 0.1.15 adds reviewed monthly ranking publication and the public
+`/top-businesses/` Top 10 results page.
+
 ## Planned Features
 
 - Structured business records
 - Categories, specialties, states, and cities
 - Conditional directory navigation
 - Public business profile pages
-- Monthly Top 10 ranking snapshots
+- Monthly Top 10 ranking snapshots and publication controls
 - Research sources and verification history
 - Add, update, correction, claim, and removal requests
 - Admin approval workflow
