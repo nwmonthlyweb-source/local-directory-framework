@@ -5,25 +5,39 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Load directory frontend styles only where they are needed.
+ * Load directory frontend styles only where needed.
  */
 function nwmd_directory_enqueue_frontend_assets() {
 
-    if (
-        !is_post_type_archive('nwmd_business') &&
-        !is_singular('nwmd_business') &&
-        !nwmd_directory_is_business_request_page() &&
-        !nwmd_directory_is_public_rankings_page()
-    ) {
+    $is_app_home = is_front_page();
+
+    $is_directory_page =
+        is_post_type_archive('nwmd_business') ||
+        is_singular('nwmd_business') ||
+        nwmd_directory_is_business_request_page() ||
+        nwmd_directory_is_public_rankings_page();
+
+    if (!$is_app_home && !$is_directory_page) {
         return;
     }
 
-    wp_enqueue_style(
-        'nwmd-directory-frontend',
-        NWMD_DIRECTORY_URL . 'assets/css/frontend.css',
-        [],
-        NWMD_DIRECTORY_VERSION
-    );
+    if ($is_directory_page) {
+        wp_enqueue_style(
+            'nwmd-directory-frontend',
+            NWMD_DIRECTORY_URL . 'assets/css/frontend.css',
+            [],
+            NWMD_DIRECTORY_VERSION
+        );
+    }
+
+    if ($is_app_home) {
+        wp_enqueue_style(
+            'nwmd-directory-app-home',
+            NWMD_DIRECTORY_URL . 'assets/css/app-home.css',
+            [],
+            NWMD_DIRECTORY_VERSION
+        );
+    }
 }
 
 add_action(
@@ -32,13 +46,51 @@ add_action(
 );
 
 /**
- * Use plugin templates unless the active theme provides an exact override.
+ * Return the business archive URL for one category.
+ *
+ * @param string $category_slug Category slug.
+ *
+ * @return string
+ */
+function nwmd_directory_get_app_category_url(
+    $category_slug
+) {
+
+    $archive_url = get_post_type_archive_link(
+        'nwmd_business'
+    );
+
+    if (!$archive_url) {
+        $archive_url = home_url('/business/');
+    }
+
+    return add_query_arg(
+        [
+            'filter_category' => sanitize_title(
+                $category_slug
+            ),
+        ],
+        $archive_url
+    );
+}
+
+/**
+ * Use plugin-owned public templates.
  *
  * @param string $template Current WordPress template path.
  *
  * @return string
  */
 function nwmd_directory_template_include($template) {
+
+    if (is_front_page()) {
+        $app_template = NWMD_DIRECTORY_PATH
+            . 'templates/app-home.php';
+
+        if (is_readable($app_template)) {
+            return $app_template;
+        }
+    }
 
     if (is_post_type_archive('nwmd_business')) {
 
@@ -92,7 +144,10 @@ add_filter(
  *
  * @return array
  */
-function nwmd_directory_get_business_term_names($post_id, $taxonomy) {
+function nwmd_directory_get_business_term_names(
+    $post_id,
+    $taxonomy
+) {
 
     $terms = get_the_terms(
         $post_id,
