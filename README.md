@@ -31,14 +31,14 @@ Intro → Category → State → City → Specialty → Top 10 Results → Busin
 
 ## Current Release
 
-Version 0.1.15 adds reviewed monthly ranking publication and the public
-`/top-businesses/` Top 10 results page.
+Version 0.1.16 adds guided Category → State → City → Specialty navigation to
+the public `/top-businesses/` ranking flow.
 
 ## Planned Features
 
 - Structured business records
 - Categories, specialties, states, and cities
-- Conditional directory navigation
+- Guided category, state, city, and specialty navigation
 - Public business profile pages
 - Monthly Top 10 ranking snapshots and publication controls
 - Research sources and verification history

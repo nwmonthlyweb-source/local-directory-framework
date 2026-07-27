@@ -381,6 +381,10 @@ The initial public route is:
 
 `/top-businesses/`
 
+The route progressively narrows Category, State, City, and Specialty choices
+using only term IDs present in the newest published snapshot. The selected
+values remain in the URL, and the final request reads the saved Top 10 entries.
+
 ## Advertising Rules
 
 - Sponsored placements must display `Sponsored` or `Advertisement`.

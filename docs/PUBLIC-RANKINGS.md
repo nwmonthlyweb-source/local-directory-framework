@@ -2,7 +2,8 @@
 
 ## Release
 
-Implemented in Local Directory Framework 0.1.15.
+Published ranking snapshots were introduced in 0.1.15.
+Guided directory navigation was added in 0.1.16.
 
 ## Purpose
 
@@ -13,15 +14,17 @@ rankings on public page requests.
 
 `/top-businesses/`
 
-Visitors choose:
+Visitors move through one guided step at a time:
 
-- State
-- City
-- Category
-- Optional specialty
+1. Category
+2. State
+3. City
+4. Specialty or All specialties
+5. Top 10 results
 
-The public query returns no more than 10 entries from the newest published
-ranking period.
+Each step displays only choices that exist in the newest published ranking
+snapshot. The flow is server-rendered, works without JavaScript, and preserves
+selections in the URL.
 
 ## Publication Workflow
 
@@ -42,9 +45,11 @@ be published.
 
 - Only the newest period with `published` status is public.
 - Publishing timestamps the period and all entries in that period.
+- Guided choices come only from that published snapshot.
 - Public pages read saved ranking positions in ascending order.
 - Public pages do not expose evidence summaries or editorial scores.
 - Only published Business profiles can appear in public results.
+- `All specialties` reads the saved ranking group whose specialty ID is zero.
 - Archiving a published period preserves its entries and publication date.
 - Paid advertising does not alter organic ranking positions.
 
