@@ -19,6 +19,52 @@ while (have_posts()) :
         )
     );
 
+    $website_url = esc_url_raw(
+        get_post_meta(
+            $post_id,
+            'nwmd_website_url',
+            true
+        )
+    );
+
+    $public_email = sanitize_email(
+        get_post_meta(
+            $post_id,
+            'nwmd_public_email',
+            true
+        )
+    );
+
+    $public_phone = sanitize_text_field(
+        get_post_meta(
+            $post_id,
+            'nwmd_public_phone',
+            true
+        )
+    );
+
+    $street_address = sanitize_text_field(
+        get_post_meta(
+            $post_id,
+            'nwmd_street_address',
+            true
+        )
+    );
+
+    $postal_code = sanitize_text_field(
+        get_post_meta(
+            $post_id,
+            'nwmd_postal_code',
+            true
+        )
+    );
+
+    $phone_href = preg_replace(
+        '/[^0-9+]/',
+        '',
+        $public_phone
+    );
+
     $categories = nwmd_directory_get_business_term_names(
         $post_id,
         'nwmd_category'
@@ -107,6 +153,80 @@ while (have_posts()) :
                     <h2>
                         <?php echo esc_html__('Business Details', 'local-directory-framework'); ?>
                     </h2>
+
+                    <?php if (!empty($website_url)) : ?>
+                        <div class="nwmd-business-profile__detail">
+                            <h3>
+                                <?php echo esc_html__('Website', 'local-directory-framework'); ?>
+                            </h3>
+
+                            <p>
+                                <a
+                                    href="<?php echo esc_url($website_url); ?>"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <?php echo esc_html__('Visit Website', 'local-directory-framework'); ?>
+                                </a>
+                            </p>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($public_phone)) : ?>
+                        <div class="nwmd-business-profile__detail">
+                            <h3>
+                                <?php echo esc_html__('Phone', 'local-directory-framework'); ?>
+                            </h3>
+
+                            <p>
+                                <?php if (!empty($phone_href)) : ?>
+                                    <a href="<?php echo esc_url('tel:' . $phone_href); ?>">
+                                        <?php echo esc_html($public_phone); ?>
+                                    </a>
+                                <?php else : ?>
+                                    <?php echo esc_html($public_phone); ?>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($public_email)) : ?>
+                        <div class="nwmd-business-profile__detail">
+                            <h3>
+                                <?php echo esc_html__('Email', 'local-directory-framework'); ?>
+                            </h3>
+
+                            <p>
+                                <a href="<?php echo esc_url('mailto:' . $public_email); ?>">
+                                    <?php echo esc_html($public_email); ?>
+                                </a>
+                            </p>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($street_address) || !empty($postal_code)) : ?>
+                        <div class="nwmd-business-profile__detail">
+                            <h3>
+                                <?php echo esc_html__('Address', 'local-directory-framework'); ?>
+                            </h3>
+
+                            <p>
+                                <?php
+                                echo esc_html(
+                                    implode(
+                                        ', ',
+                                        array_filter(
+                                            [
+                                                $street_address,
+                                                $postal_code,
+                                            ]
+                                        )
+                                    )
+                                );
+                                ?>
+                            </p>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if (!empty($specialties)) : ?>
                         <div class="nwmd-business-profile__detail">

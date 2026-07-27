@@ -83,6 +83,13 @@ function nwmd_directory_render_business_requests_admin_notice() {
                 'local-directory-framework'
             ),
         ],
+        'request-updated-mail-failed' => [
+            'warning',
+            __(
+                'Business request updated, but the requester email could not be sent.',
+                'local-directory-framework'
+            ),
+        ],
         'request-not-found' => [
             'error',
             __(
@@ -920,6 +927,32 @@ function nwmd_directory_update_business_request() {
             'request-update-failed',
             $request_id
         );
+    }
+
+    if (
+        $status !== $request->status &&
+        !empty($request->email_verified_at) &&
+        in_array(
+            $status,
+            [
+                'approved',
+                'rejected',
+            ],
+            true
+        )
+    ) {
+        $mail_sent =
+            nwmd_directory_send_business_request_decision_email(
+                $request,
+                $status
+            );
+
+        if (!$mail_sent) {
+            nwmd_directory_redirect_business_requests_admin(
+                'request-updated-mail-failed',
+                $request_id
+            );
+        }
     }
 
     nwmd_directory_redirect_business_requests_admin(
