@@ -11,19 +11,17 @@ if (!defined('ABSPATH')) {
  */
 function nwmd_directory_get_business_request_mail_name() {
 
-    $site_name = sanitize_text_field(
-        wp_specialchars_decode(
-            get_bloginfo('name'),
-            ENT_QUOTES
+    $mail_name = apply_filters(
+        'nwmd_directory_business_request_mail_name',
+        __(
+            'Northwest Monthly',
+            'local-directory-framework'
         )
     );
 
-    return '' !== $site_name
-        ? $site_name
-        : __(
-            'Northwest Monthly',
-            'local-directory-framework'
-        );
+    return sanitize_text_field(
+        (string) $mail_name
+    );
 }
 
 /**
