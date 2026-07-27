@@ -49,6 +49,10 @@ while (have_posts()) :
             'business_id'  => $post_id,
         ]
     );
+
+    $business_ad_context = nwmd_directory_get_business_ad_context(
+        $post_id
+    );
     ?>
 
     <main class="nwmd-directory nwmd-directory--single" id="primary">
@@ -164,6 +168,13 @@ while (have_posts()) :
                 </aside>
             </div>
         </article>
+
+        <?php
+        nwmd_directory_render_ad(
+            'business_profile_bottom',
+            $business_ad_context
+        );
+        ?>
     </main>
 
 <?php

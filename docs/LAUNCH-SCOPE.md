@@ -47,10 +47,14 @@ Version 1 supports:
 - One clearly labeled sponsored result placement
 - One bottom banner on result pages
 - One bottom banner on business profiles
+- Admin-managed targeting by state, city, category, and specialty
+- Optional campaign schedules and Media Library images
+- Aggregate impression and click counters
 - No popup advertising
 - No permanent floating advertisement
 
-Advertising must never silently control editorial rankings.
+Sponsored content remains outside the ordered Top 10 list. Advertising
+must never silently control editorial rankings.
 
 ## Accounts
 

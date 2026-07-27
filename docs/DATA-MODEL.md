@@ -389,8 +389,18 @@ values remain in the URL, and the final request reads the saved Top 10 entries.
 
 - Sponsored placements must display `Sponsored` or `Advertisement`.
 - Paid placement must not change organic rank positions.
-- Paid outbound links use `rel="sponsored"`.
+- Paid outbound links use `rel="sponsored noopener noreferrer"`.
+- A zero target term ID means that the campaign applies to every value for
+  that taxonomy.
+- The most specifically targeted active campaign wins for each placement.
+- Ties use the most recently updated campaign.
+- Activating a campaign pauses another active campaign with the exact same
+  placement and targeting values.
+- Campaign schedules use the WordPress site timezone.
+- Ended active campaigns move to `expired`.
 - Version 1 uses aggregate impression and click counters.
+- Clicks pass through `/sponsored-click/{id}/` before redirecting to a
+  validated HTTP or HTTPS destination.
 - Detailed event-level analytics can be added later.
 
 ## Removal Rules

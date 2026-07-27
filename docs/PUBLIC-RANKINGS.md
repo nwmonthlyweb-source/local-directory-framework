@@ -4,6 +4,7 @@
 
 Published ranking snapshots were introduced in 0.1.15.
 Guided directory navigation was added in 0.1.16.
+Public sponsored placements were added in 0.1.17.
 
 ## Purpose
 
@@ -52,6 +53,10 @@ be published.
 - `All specialties` reads the saved ranking group whose specialty ID is zero.
 - Archiving a published period preserves its entries and publication date.
 - Paid advertising does not alter organic ranking positions.
+- A clearly labeled Sponsored placement may appear before the ordered
+  Top 10 list.
+- A clearly labeled Advertisement banner may appear after the organic
+  results.
 
 ## Theme Overrides
 

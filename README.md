@@ -31,8 +31,8 @@ Intro → Category → State → City → Specialty → Top 10 Results → Busin
 
 ## Current Release
 
-Version 0.1.16 adds guided Category → State → City → Specialty navigation to
-the public `/top-businesses/` ranking flow.
+Version 0.1.17 adds admin-managed sponsored results and bottom-banner
+advertising without changing editorial ranking positions.
 
 ## Planned Features
 
@@ -44,6 +44,6 @@ the public `/top-businesses/` ranking flow.
 - Research sources and verification history
 - Add, update, correction, claim, and removal requests
 - Admin approval workflow
-- Sponsored placement and bottom-banner advertising
+- Sponsored result and bottom-banner advertising
 - Import and duplicate-detection tools
 - Cache-friendly public pages

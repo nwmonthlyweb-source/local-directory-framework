@@ -584,6 +584,7 @@ function nwmd_directory_get_public_ranking_terms(
         $empty_selection
     );
 }
+
 /**
  * Return whether the selected area has an all-specialties ranking group.
  *
