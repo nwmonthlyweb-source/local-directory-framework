@@ -777,6 +777,120 @@ function nwmd_directory_send_business_request_verification_email(
 }
 
 /**
+ * Send an approval or rejection decision to the requester.
+ *
+ * Administrator notes remain private and are never included.
+ *
+ * @param object $request Business-request database record.
+ * @param string $status  New controlled request status.
+ *
+ * @return bool
+ */
+function nwmd_directory_send_business_request_decision_email(
+    $request,
+    $status
+) {
+
+    if (
+        !is_object($request) ||
+        !in_array(
+            $status,
+            [
+                'approved',
+                'rejected',
+            ],
+            true
+        )
+    ) {
+        return false;
+    }
+
+    $email = sanitize_email(
+        (string) ($request->requester_email ?? '')
+    );
+
+    if (
+        '' === $email ||
+        false === is_email($email)
+    ) {
+        return false;
+    }
+
+    $requester = sanitize_text_field(
+        (string) ($request->requester_name ?? '')
+    );
+
+    if ('' === $requester) {
+        $requester = __(
+            'there',
+            'local-directory-framework'
+        );
+    }
+
+    $business_name = sanitize_text_field(
+        (string) ($request->business_name ?? '')
+    );
+
+    $request_type = sanitize_key(
+        (string) ($request->request_type ?? '')
+    );
+
+    $type_choices =
+        nwmd_directory_get_business_request_type_choices();
+
+    $status_choices =
+        nwmd_directory_get_business_request_status_choices();
+
+    $type_label = $type_choices[$request_type]
+        ?? $request_type;
+
+    $status_label = $status_choices[$status]
+        ?? $status;
+
+    $site_name =
+        nwmd_directory_get_business_request_mail_name();
+
+    if ('approved' === $status) {
+        $subject = sprintf(
+            /* translators: %s: Website name. */
+            __(
+                '[%s] Your business request was approved',
+                'local-directory-framework'
+            ),
+            $site_name
+        );
+    } else {
+        $subject = sprintf(
+            /* translators: %s: Website name. */
+            __(
+                '[%s] Your business request was not approved',
+                'local-directory-framework'
+            ),
+            $site_name
+        );
+    }
+
+    $message = sprintf(
+        /* translators: 1: Requester name, 2: Request type, 3: Business name, 4: Status, 5: Request ID. */
+        __(
+            "Hello %1\$s,\n\nNorthwest Monthly reviewed your %2\$s request for %3\$s.\n\nStatus: %4\$s\nRequest ID: %5\$d\n\nThis email confirms the administrator's decision. Administrator notes are kept private.",
+            'local-directory-framework'
+        ),
+        $requester,
+        $type_label,
+        $business_name,
+        $status_label,
+        absint($request->id ?? 0)
+    );
+
+    return nwmd_directory_send_branded_business_request_mail(
+        $email,
+        $subject,
+        $message
+    );
+}
+
+/**
  * Notify the administrator after a request is verified.
  *
  * @param object $request Verified request record.
