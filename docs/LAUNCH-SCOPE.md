@@ -14,6 +14,10 @@ Create a focused local directory that helps visitors find reviewed businesses wi
 6. Published Top 10 results
 7. Individual business profile
 
+The public rankings page reads only a reviewed monthly snapshot. Publishing a
+new period archives the previously published period, and published snapshots
+remain read-only.
+
 ## Business Management
 
 The public header uses the label:

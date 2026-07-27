@@ -276,6 +276,42 @@ function nwmd_directory_render_rankings_notice() {
             'error',
             'The ranking entry could not be deleted.',
         ],
+        'ranking-period-review' => [
+            'success',
+            'The ranking period is ready for final review.',
+        ],
+        'ranking-period-draft' => [
+            'success',
+            'The ranking period was returned to draft.',
+        ],
+        'ranking-period-published' => [
+            'success',
+            'The ranking period was published. Any previously published period was archived.',
+        ],
+        'ranking-period-archived' => [
+            'success',
+            'The ranking period was archived.',
+        ],
+        'ranking-period-not-found' => [
+            'error',
+            'The ranking period could not be found.',
+        ],
+        'invalid-period-transition' => [
+            'error',
+            'That ranking period status change is not allowed.',
+        ],
+        'ranking-period-empty' => [
+            'warning',
+            'Add at least one ranking entry before review or publication.',
+        ],
+        'ranking-period-unpublished-business' => [
+            'error',
+            'Every ranked business must be published before this period can be published.',
+        ],
+        'ranking-period-update-failed' => [
+            'error',
+            'The ranking period status could not be updated.',
+        ],
     ];
 
     if (!isset($messages[$notice])) {
@@ -610,6 +646,12 @@ function nwmd_directory_render_rankings_admin_page() {
                 );
                 ?>
             </p>
+
+            <?php
+            nwmd_directory_render_ranking_period_actions(
+                $selected_period
+            );
+            ?>
 
             <?php if (nwmd_directory_ranking_period_is_editable($selected_period)) : ?>
 

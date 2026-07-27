@@ -62,7 +62,16 @@ $active_filters = array_filter(
             <?php echo esc_html__('Discover local businesses serving Portland and nearby Oregon communities.', 'local-directory-framework'); ?>
         </p>
 
-        <p class="nwmd-directory__manage">
+        <div class="nwmd-directory__actions">
+            <a
+                class="nwmd-directory__rankings-link"
+                href="<?php echo esc_url(
+                    nwmd_directory_get_public_rankings_url()
+                ); ?>"
+            >
+                <?php echo esc_html__('View Top 10 Rankings', 'local-directory-framework'); ?>
+            </a>
+
             <a
                 class="nwmd-directory__manage-link"
                 href="<?php echo esc_url(
@@ -71,7 +80,7 @@ $active_filters = array_filter(
             >
                 <?php echo esc_html__('Manage a Business', 'local-directory-framework'); ?>
             </a>
-        </p>
+        </div>
     </section>
 
     <?php if (!empty($archive_url)) : ?>
