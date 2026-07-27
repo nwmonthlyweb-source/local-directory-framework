@@ -13,6 +13,9 @@ $step = nwmd_directory_get_public_ranking_step($selection);
 $entries = [];
 $step_terms = [];
 $all_specialties_available = false;
+$ranking_ad_context = nwmd_directory_get_ranking_ad_context(
+    $selection
+);
 
 if ($period) {
     if ('category' === $step) {
@@ -608,6 +611,13 @@ if ('results' === $step) {
                         </h2>
                     </header>
 
+                    <?php
+                    nwmd_directory_render_ad(
+                        'results_sponsored',
+                        $ranking_ad_context
+                    );
+                    ?>
+
                     <ol class="nwmd-ranking-results">
                         <?php foreach ($entries as $entry) : ?>
                             <?php
@@ -700,8 +710,24 @@ if ('results' === $step) {
                             </li>
                         <?php endforeach; ?>
                     </ol>
+
+                    <?php
+                    nwmd_directory_render_ad(
+                        'results_bottom',
+                        $ranking_ad_context
+                    );
+                    ?>
                 </section>
 
+            <?php endif; ?>
+
+            <?php if (empty($entries)) : ?>
+                <?php
+                nwmd_directory_render_ad(
+                    'results_bottom',
+                    $ranking_ad_context
+                );
+                ?>
             <?php endif; ?>
 
             <p class="nwmd-guided-actions">

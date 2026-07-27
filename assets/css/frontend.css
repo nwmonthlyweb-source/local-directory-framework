@@ -1047,3 +1047,119 @@
         box-sizing: border-box;
     }
 }
+/* Public direct advertising. */
+.nwmd-ad {
+    margin: 24px 0;
+}
+
+.nwmd-ad__link {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid #cbd7e6;
+    border-radius: 16px;
+    background: #ffffff;
+    color: #172033;
+    text-decoration: none;
+}
+
+.nwmd-ad__link:hover,
+.nwmd-ad__link:focus {
+    border-color: #93c5fd;
+    color: #172033;
+    text-decoration: none;
+}
+
+.nwmd-ad__media {
+    display: block;
+    overflow: hidden;
+    background: #eef4fb;
+}
+
+.nwmd-ad__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nwmd-ad__content {
+    display: grid;
+    align-content: center;
+    gap: 7px;
+    min-width: 0;
+    padding: 22px;
+}
+
+.nwmd-ad__label {
+    color: #2563eb;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.nwmd-ad__title {
+    font-size: 1.3rem;
+    line-height: 1.25;
+}
+
+.nwmd-ad__advertiser {
+    color: #526078;
+    font-size: 0.95rem;
+}
+
+.nwmd-ad__action {
+    margin-top: 6px;
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.nwmd-ad--sponsored-result .nwmd-ad__link {
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+    border-style: dashed;
+    background: #f8fafc;
+}
+
+.nwmd-ad--sponsored-result .nwmd-ad__media {
+    min-height: 180px;
+}
+
+.nwmd-ad--banner {
+    margin-top: 32px;
+}
+
+.nwmd-ad--banner .nwmd-ad__link {
+    grid-template-columns: minmax(220px, 360px) minmax(0, 1fr);
+}
+
+.nwmd-ad--banner .nwmd-ad__media {
+    min-height: 150px;
+    max-height: 240px;
+}
+
+.nwmd-ad--no-image .nwmd-ad__link {
+    grid-template-columns: 1fr;
+}
+
+.nwmd-business-profile + .nwmd-ad {
+    max-width: 980px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+@media (max-width: 700px) {
+    .nwmd-ad--sponsored-result .nwmd-ad__link,
+    .nwmd-ad--banner .nwmd-ad__link {
+        grid-template-columns: 1fr;
+    }
+
+    .nwmd-ad--sponsored-result .nwmd-ad__media,
+    .nwmd-ad--banner .nwmd-ad__media {
+        min-height: 180px;
+        max-height: 220px;
+    }
+
+    .nwmd-ad__content {
+        padding: 20px;
+    }
+}
