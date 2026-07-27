@@ -255,8 +255,7 @@ Receive public requests without requiring business-owner accounts.
 Request types:
 
 - add
-- claim
-- update
+- update (claim or update)
 - correction
 - removal
 
@@ -295,6 +294,15 @@ Required indexes:
 - requester_email
 - status
 - created_at
+
+Request workflow rules:
+
+- Store only a SHA-256 verification-token hash.
+- Verification links expire 7 days after `created_at`.
+- Successful verification clears the stored token hash.
+- Verified requests move from `pending_email` to `pending_review`.
+- Public requests never change Business profiles automatically.
+- Administrator review records `reviewed_by` and `reviewed_at`.
 
 ### wp_nwmd_ads
 

@@ -29,6 +29,9 @@ Available requests:
 
 All requests require email verification and administrator review.
 
+The request workflow must never change or publish a Business profile
+automatically. Approved changes are applied by an administrator.
+
 ## Advertising
 
 Version 1 supports:

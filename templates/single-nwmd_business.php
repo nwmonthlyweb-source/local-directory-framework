@@ -42,6 +42,13 @@ while (have_posts()) :
     $archive_url = get_post_type_archive_link(
         'nwmd_business'
     );
+
+    $manage_business_url = nwmd_directory_get_business_request_url(
+        [
+            'request_type' => 'update',
+            'business_id'  => $post_id,
+        ]
+    );
     ?>
 
     <main class="nwmd-directory nwmd-directory--single" id="primary">
@@ -130,6 +137,30 @@ while (have_posts()) :
                             </p>
                         </div>
                     <?php endif; ?>
+
+                    <div class="nwmd-business-profile__detail">
+                        <h3>
+                            <?php echo esc_html__('Manage This Business', 'local-directory-framework'); ?>
+                        </h3>
+
+                        <p>
+                            <?php
+                            echo esc_html__(
+                                'Claim, update, correct, or request removal of this profile.',
+                                'local-directory-framework'
+                            );
+                            ?>
+                        </p>
+
+                        <p>
+                            <a
+                                class="nwmd-business-profile__manage-link"
+                                href="<?php echo esc_url($manage_business_url); ?>"
+                            >
+                                <?php echo esc_html__('Manage a Business', 'local-directory-framework'); ?>
+                            </a>
+                        </p>
+                    </div>
                 </aside>
             </div>
         </article>
