@@ -30,6 +30,48 @@ function nwmd_directory_get_public_rankings_url(
 }
 
 /**
+ * Return a public rankings URL containing only supported navigation values.
+ *
+ * @param array $arguments Public ranking selections.
+ *
+ * @return string
+ */
+function nwmd_directory_get_public_ranking_navigation_url(
+    $arguments = []
+) {
+
+    $allowed_keys = [
+        'ranking_category',
+        'ranking_state',
+        'ranking_city',
+        'ranking_specialty',
+    ];
+
+    $clean_arguments = [];
+
+    foreach ($allowed_keys as $key) {
+        if (
+            !isset($arguments[$key]) ||
+            !is_scalar($arguments[$key])
+        ) {
+            continue;
+        }
+
+        $value = sanitize_title(
+            (string) $arguments[$key]
+        );
+
+        if ('' !== $value) {
+            $clean_arguments[$key] = $value;
+        }
+    }
+
+    return nwmd_directory_get_public_rankings_url(
+        $clean_arguments
+    );
+}
+
+/**
  * Register the public Top 10 rankings route.
  */
 function nwmd_directory_register_public_rankings_rewrite() {
@@ -233,117 +275,61 @@ function nwmd_directory_get_public_ranking_filter_value($key) {
 }
 
 /**
- * Return published ranking terms used by one period.
- *
- * @param int    $period_id Ranking period ID.
- * @param string $taxonomy Taxonomy name.
- *
- * @return array
- */
-function nwmd_directory_get_public_ranking_terms(
-    $period_id,
-    $taxonomy
-) {
-
-    $columns = [
-        'nwmd_state'     => 'state_term_id',
-        'nwmd_city'      => 'city_term_id',
-        'nwmd_category'  => 'category_term_id',
-        'nwmd_specialty' => 'specialty_term_id',
-    ];
-
-    if (
-        !isset($columns[$taxonomy]) ||
-        !taxonomy_exists($taxonomy)
-    ) {
-        return [];
-    }
-
-    global $wpdb;
-
-    $rankings_table = $wpdb->prefix
-        . 'nwmd_ranking_entries';
-
-    $column = $columns[$taxonomy];
-
-    $term_ids = $wpdb->get_col(
-        $wpdb->prepare(
-            "SELECT DISTINCT {$column}
-            FROM {$rankings_table}
-            WHERE ranking_period_id = %d
-                AND published_at IS NOT NULL
-                AND {$column} > 0",
-            absint($period_id)
-        )
-    );
-
-    $term_ids = array_values(
-        array_filter(
-            array_map(
-                'absint',
-                $term_ids
-            )
-        )
-    );
-
-    if (empty($term_ids)) {
-        return [];
-    }
-
-    $terms = get_terms(
-        [
-            'taxonomy'   => $taxonomy,
-            'hide_empty' => false,
-            'include'    => $term_ids,
-            'orderby'    => 'name',
-            'order'      => 'ASC',
-        ]
-    );
-
-    return is_wp_error($terms)
-        ? []
-        : $terms;
-}
-
-/**
  * Return validated public ranking selections.
+ *
+ * The special ranking_specialty=all value selects the saved
+ * all-specialties ranking group whose specialty term ID is zero.
  *
  * @return array
  */
 function nwmd_directory_get_public_ranking_selection() {
 
+    $specialty_value =
+        nwmd_directory_get_public_ranking_filter_value(
+            'ranking_specialty'
+        );
+
+    $specialty_all = 'all' === $specialty_value;
+
     $slugs = [
+        'category' => nwmd_directory_get_public_ranking_filter_value(
+            'ranking_category'
+        ),
         'state' => nwmd_directory_get_public_ranking_filter_value(
             'ranking_state'
         ),
         'city' => nwmd_directory_get_public_ranking_filter_value(
             'ranking_city'
         ),
-        'category' => nwmd_directory_get_public_ranking_filter_value(
-            'ranking_category'
-        ),
-        'specialty' => nwmd_directory_get_public_ranking_filter_value(
-            'ranking_specialty'
-        ),
+        'specialty' => $specialty_all
+            ? ''
+            : $specialty_value,
     ];
 
     $taxonomies = [
+        'category'  => 'nwmd_category',
         'state'     => 'nwmd_state',
         'city'      => 'nwmd_city',
-        'category'  => 'nwmd_category',
         'specialty' => 'nwmd_specialty',
     ];
 
     $terms = [
+        'category'  => null,
         'state'     => null,
         'city'      => null,
-        'category'  => null,
         'specialty' => null,
     ];
 
     $invalid = false;
 
     foreach ($taxonomies as $key => $taxonomy) {
+
+        if (
+            'specialty' === $key &&
+            $specialty_all
+        ) {
+            continue;
+        }
 
         if ('' === $slugs[$key]) {
             continue;
@@ -385,17 +371,263 @@ function nwmd_directory_get_public_ranking_selection() {
 
     $ready = (
         !$invalid &&
+        $terms['category'] instanceof WP_Term &&
         $terms['state'] instanceof WP_Term &&
         $terms['city'] instanceof WP_Term &&
-        $terms['category'] instanceof WP_Term
+        (
+            $specialty_all ||
+            $terms['specialty'] instanceof WP_Term
+        )
     );
 
     return [
-        'slugs'   => $slugs,
-        'terms'   => $terms,
-        'invalid' => $invalid,
-        'ready'   => $ready,
+        'slugs'         => $slugs,
+        'terms'         => $terms,
+        'specialty_all' => $specialty_all,
+        'invalid'       => $invalid,
+        'ready'         => $ready,
     ];
+}
+
+/**
+ * Return the active guided-navigation step.
+ *
+ * @param array $selection Validated ranking selection.
+ *
+ * @return string
+ */
+function nwmd_directory_get_public_ranking_step($selection) {
+
+    if (!empty($selection['invalid'])) {
+        return 'invalid';
+    }
+
+    if (
+        empty($selection['terms']['category']) ||
+        !($selection['terms']['category'] instanceof WP_Term)
+    ) {
+        return 'category';
+    }
+
+    if (
+        empty($selection['terms']['state']) ||
+        !($selection['terms']['state'] instanceof WP_Term)
+    ) {
+        return 'state';
+    }
+
+    if (
+        empty($selection['terms']['city']) ||
+        !($selection['terms']['city'] instanceof WP_Term)
+    ) {
+        return 'city';
+    }
+
+    if (
+        empty($selection['specialty_all']) &&
+        (
+            empty($selection['terms']['specialty']) ||
+            !($selection['terms']['specialty'] instanceof WP_Term)
+        )
+    ) {
+        return 'specialty';
+    }
+
+    return 'results';
+}
+
+/**
+ * Return terms available for one guided navigation step.
+ *
+ * Choices are constrained by selections from earlier steps and by the
+ * currently published ranking snapshot.
+ *
+ * @param int    $period_id Ranking period ID.
+ * @param string $taxonomy Target taxonomy.
+ * @param array  $selection Validated ranking selection.
+ *
+ * @return array
+ */
+function nwmd_directory_get_public_ranking_step_terms(
+    $period_id,
+    $taxonomy,
+    $selection
+) {
+
+    $columns = [
+        'nwmd_category'  => 'category_term_id',
+        'nwmd_state'     => 'state_term_id',
+        'nwmd_city'      => 'city_term_id',
+        'nwmd_specialty' => 'specialty_term_id',
+    ];
+
+    $selection_columns = [
+        'category' => [
+            'taxonomy' => 'nwmd_category',
+            'column'   => 'category_term_id',
+        ],
+        'state' => [
+            'taxonomy' => 'nwmd_state',
+            'column'   => 'state_term_id',
+        ],
+        'city' => [
+            'taxonomy' => 'nwmd_city',
+            'column'   => 'city_term_id',
+        ],
+    ];
+
+    if (
+        !isset($columns[$taxonomy]) ||
+        !taxonomy_exists($taxonomy)
+    ) {
+        return [];
+    }
+
+    global $wpdb;
+
+    $rankings_table = $wpdb->prefix
+        . 'nwmd_ranking_entries';
+
+    $target_column = $columns[$taxonomy];
+
+    $sql = "SELECT DISTINCT {$target_column}
+        FROM {$rankings_table}
+        WHERE ranking_period_id = %d
+            AND published_at IS NOT NULL
+            AND {$target_column} > 0";
+
+    $arguments = [
+        absint($period_id),
+    ];
+
+    foreach ($selection_columns as $key => $configuration) {
+
+        if ($configuration['taxonomy'] === $taxonomy) {
+            continue;
+        }
+
+        $term = $selection['terms'][$key] ?? null;
+
+        if (!$term instanceof WP_Term) {
+            continue;
+        }
+
+        $sql .= ' AND '
+            . $configuration['column']
+            . ' = %d';
+
+        $arguments[] = absint($term->term_id);
+    }
+
+    $term_ids = $wpdb->get_col(
+        $wpdb->prepare(
+            $sql,
+            $arguments
+        )
+    );
+
+    $term_ids = array_values(
+        array_filter(
+            array_map(
+                'absint',
+                $term_ids
+            )
+        )
+    );
+
+    if (empty($term_ids)) {
+        return [];
+    }
+
+    $terms = get_terms(
+        [
+            'taxonomy'   => $taxonomy,
+            'hide_empty' => false,
+            'include'    => $term_ids,
+            'orderby'    => 'name',
+            'order'      => 'ASC',
+        ]
+    );
+
+    return is_wp_error($terms)
+        ? []
+        : $terms;
+}
+
+/**
+ * Return published ranking terms used by one period.
+ *
+ * Kept for compatibility with 0.1.15 theme overrides.
+ *
+ * @param int    $period_id Ranking period ID.
+ * @param string $taxonomy Taxonomy name.
+ *
+ * @return array
+ */
+function nwmd_directory_get_public_ranking_terms(
+    $period_id,
+    $taxonomy
+) {
+
+    $empty_selection = [
+        'terms' => [
+            'category'  => null,
+            'state'     => null,
+            'city'      => null,
+            'specialty' => null,
+        ],
+    ];
+
+    return nwmd_directory_get_public_ranking_step_terms(
+        $period_id,
+        $taxonomy,
+        $empty_selection
+    );
+}
+/**
+ * Return whether the selected area has an all-specialties ranking group.
+ *
+ * @param int   $period_id Ranking period ID.
+ * @param array $selection Validated ranking selection.
+ *
+ * @return bool
+ */
+function nwmd_directory_public_ranking_has_all_specialties(
+    $period_id,
+    $selection
+) {
+
+    if (
+        !($selection['terms']['category'] instanceof WP_Term) ||
+        !($selection['terms']['state'] instanceof WP_Term) ||
+        !($selection['terms']['city'] instanceof WP_Term)
+    ) {
+        return false;
+    }
+
+    global $wpdb;
+
+    $rankings_table = $wpdb->prefix
+        . 'nwmd_ranking_entries';
+
+    $count = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT COUNT(*)
+            FROM {$rankings_table}
+            WHERE ranking_period_id = %d
+                AND category_term_id = %d
+                AND state_term_id = %d
+                AND city_term_id = %d
+                AND specialty_term_id = 0
+                AND published_at IS NOT NULL",
+            absint($period_id),
+            absint($selection['terms']['category']->term_id),
+            absint($selection['terms']['state']->term_id),
+            absint($selection['terms']['city']->term_id)
+        )
+    );
+
+    return absint($count) > 0;
 }
 
 /**
@@ -414,20 +646,20 @@ function nwmd_directory_get_public_ranking_entries(
     if (
         empty($selection['ready']) ||
         empty($selection['terms']) ||
+        !($selection['terms']['category'] instanceof WP_Term) ||
         !($selection['terms']['state'] instanceof WP_Term) ||
-        !($selection['terms']['city'] instanceof WP_Term) ||
-        !($selection['terms']['category'] instanceof WP_Term)
+        !($selection['terms']['city'] instanceof WP_Term)
     ) {
         return [];
     }
 
-    $specialty_term_id = (
-        $selection['terms']['specialty'] instanceof WP_Term
+    $specialty_term_id = !empty(
+        $selection['specialty_all']
     )
-        ? absint(
+        ? 0
+        : absint(
             $selection['terms']['specialty']->term_id
-        )
-        : 0;
+        );
 
     global $wpdb;
 

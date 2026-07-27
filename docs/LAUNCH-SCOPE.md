@@ -18,6 +18,10 @@ The public rankings page reads only a reviewed monthly snapshot. Publishing a
 new period archives the previously published period, and published snapshots
 remain read-only.
 
+The public route guides visitors through Category → State → City → Specialty.
+Each server-rendered step shows only choices available in the current published
+snapshot, so the flow remains accessible and cache-friendly without JavaScript.
+
 ## Business Management
 
 The public header uses the label:

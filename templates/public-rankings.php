@@ -7,38 +7,45 @@ if (!defined('ABSPATH')) {
 get_header();
 
 $period = nwmd_directory_get_current_published_ranking_period();
-
 $selection = nwmd_directory_get_public_ranking_selection();
+$step = nwmd_directory_get_public_ranking_step($selection);
 
 $entries = [];
-
-$state_terms = [];
-$city_terms = [];
-$category_terms = [];
-$specialty_terms = [];
+$step_terms = [];
+$all_specialties_available = false;
 
 if ($period) {
-    $state_terms = nwmd_directory_get_public_ranking_terms(
-        $period->id,
-        'nwmd_state'
-    );
+    if ('category' === $step) {
+        $step_terms = nwmd_directory_get_public_ranking_step_terms(
+            $period->id,
+            'nwmd_category',
+            $selection
+        );
+    } elseif ('state' === $step) {
+        $step_terms = nwmd_directory_get_public_ranking_step_terms(
+            $period->id,
+            'nwmd_state',
+            $selection
+        );
+    } elseif ('city' === $step) {
+        $step_terms = nwmd_directory_get_public_ranking_step_terms(
+            $period->id,
+            'nwmd_city',
+            $selection
+        );
+    } elseif ('specialty' === $step) {
+        $step_terms = nwmd_directory_get_public_ranking_step_terms(
+            $period->id,
+            'nwmd_specialty',
+            $selection
+        );
 
-    $city_terms = nwmd_directory_get_public_ranking_terms(
-        $period->id,
-        'nwmd_city'
-    );
-
-    $category_terms = nwmd_directory_get_public_ranking_terms(
-        $period->id,
-        'nwmd_category'
-    );
-
-    $specialty_terms = nwmd_directory_get_public_ranking_terms(
-        $period->id,
-        'nwmd_specialty'
-    );
-
-    if (!empty($selection['ready'])) {
+        $all_specialties_available =
+            nwmd_directory_public_ranking_has_all_specialties(
+                $period->id,
+                $selection
+            );
+    } elseif ('results' === $step) {
         $entries = nwmd_directory_get_public_ranking_entries(
             $period->id,
             $selection
@@ -50,21 +57,84 @@ $archive_url = get_post_type_archive_link(
     'nwmd_business'
 );
 
+$category_term = $selection['terms']['category'];
+$state_term = $selection['terms']['state'];
+$city_term = $selection['terms']['city'];
+$specialty_term = $selection['terms']['specialty'];
+
+$category_args = [];
+$state_args = [];
+$city_args = [];
+
+if ($category_term instanceof WP_Term) {
+    $category_args['ranking_category'] = $category_term->slug;
+    $state_args = $category_args;
+    $city_args = $category_args;
+}
+
+if ($state_term instanceof WP_Term) {
+    $state_args['ranking_state'] = $state_term->slug;
+    $city_args = $state_args;
+}
+
+if ($city_term instanceof WP_Term) {
+    $city_args['ranking_city'] = $city_term->slug;
+}
+
+$step_number = [
+    'category'  => 1,
+    'state'     => 2,
+    'city'      => 3,
+    'specialty' => 4,
+    'results'   => 4,
+];
+
+$current_step_number = $step_number[$step] ?? 1;
+
+$progress_steps = [
+    'category' => [
+        'number' => 1,
+        'label'  => __('Category', 'local-directory-framework'),
+        'value'  => $category_term instanceof WP_Term
+            ? $category_term->name
+            : '',
+    ],
+    'state' => [
+        'number' => 2,
+        'label'  => __('State', 'local-directory-framework'),
+        'value'  => $state_term instanceof WP_Term
+            ? $state_term->name
+            : '',
+    ],
+    'city' => [
+        'number' => 3,
+        'label'  => __('City', 'local-directory-framework'),
+        'value'  => $city_term instanceof WP_Term
+            ? $city_term->name
+            : '',
+    ],
+    'specialty' => [
+        'number' => 4,
+        'label'  => __('Specialty', 'local-directory-framework'),
+        'value'  => !empty($selection['specialty_all'])
+            ? __('All specialties', 'local-directory-framework')
+            : (
+                $specialty_term instanceof WP_Term
+                    ? $specialty_term->name
+                    : ''
+            ),
+    ],
+];
+
 $result_labels = [];
 
-if (!empty($selection['ready'])) {
-    $result_labels[] = $selection['terms']['category']->name;
-    $result_labels[] = $selection['terms']['city']->name;
-    $result_labels[] = $selection['terms']['state']->name;
-
-    $result_labels[] = (
-        $selection['terms']['specialty'] instanceof WP_Term
-    )
-        ? $selection['terms']['specialty']->name
-        : __(
-            'All specialties',
-            'local-directory-framework'
-        );
+if ('results' === $step) {
+    $result_labels[] = $category_term->name;
+    $result_labels[] = $city_term->name;
+    $result_labels[] = $state_term->name;
+    $result_labels[] = !empty($selection['specialty_all'])
+        ? __('All specialties', 'local-directory-framework')
+        : $specialty_term->name;
 }
 ?>
 
@@ -78,13 +148,13 @@ if (!empty($selection['ready'])) {
         </p>
 
         <h1 class="nwmd-directory__title">
-            <?php echo esc_html__('Top Local Businesses', 'local-directory-framework'); ?>
+            <?php echo esc_html__('Find Top Local Businesses', 'local-directory-framework'); ?>
         </h1>
 
         <p class="nwmd-directory__description">
             <?php
             echo esc_html__(
-                'Browse the latest published editorial ranking snapshot by location, category, and specialty.',
+                'Choose a category, state, city, and specialty to view the latest published Top 10 ranking.',
                 'local-directory-framework'
             );
             ?>
@@ -127,142 +197,56 @@ if (!empty($selection['ready'])) {
 
     <?php else : ?>
 
-        <form
-            class="nwmd-ranking-filters"
-            action="<?php echo esc_url(
-                nwmd_directory_get_public_rankings_url()
-            ); ?>"
-            method="get"
+        <nav
+            class="nwmd-guided-progress"
+            aria-label="<?php echo esc_attr__('Ranking search progress', 'local-directory-framework'); ?>"
         >
-            <div class="nwmd-ranking-filters__fields">
-                <label class="nwmd-ranking-filters__field">
-                    <span>
-                        <?php echo esc_html__('State', 'local-directory-framework'); ?>
-                    </span>
+            <ol>
+                <?php foreach ($progress_steps as $progress_key => $progress_step) : ?>
+                    <?php
+                    $is_complete = '' !== $progress_step['value'];
+                    $is_current = $progress_step['number'] === $current_step_number &&
+                        'results' !== $step;
 
-                    <select
-                        name="ranking_state"
-                        required
+                    $classes = [
+                        'nwmd-guided-progress__step',
+                    ];
+
+                    if ($is_complete) {
+                        $classes[] = 'is-complete';
+                    }
+
+                    if ($is_current) {
+                        $classes[] = 'is-current';
+                    }
+                    ?>
+                    <li
+                        class="<?php echo esc_attr(implode(' ', $classes)); ?>"
+                        <?php if ($is_current) : ?>
+                            aria-current="step"
+                        <?php endif; ?>
                     >
-                        <option value="">
-                            <?php echo esc_html__('Choose a state', 'local-directory-framework'); ?>
-                        </option>
+                        <span class="nwmd-guided-progress__number">
+                            <?php echo esc_html($progress_step['number']); ?>
+                        </span>
 
-                        <?php foreach ($state_terms as $term) : ?>
-                            <option
-                                value="<?php echo esc_attr($term->slug); ?>"
-                                <?php selected(
-                                    $selection['slugs']['state'],
-                                    $term->slug
-                                ); ?>
-                            >
-                                <?php echo esc_html($term->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
+                        <span class="nwmd-guided-progress__text">
+                            <strong>
+                                <?php echo esc_html($progress_step['label']); ?>
+                            </strong>
 
-                <label class="nwmd-ranking-filters__field">
-                    <span>
-                        <?php echo esc_html__('City', 'local-directory-framework'); ?>
-                    </span>
+                            <?php if ($is_complete) : ?>
+                                <small>
+                                    <?php echo esc_html($progress_step['value']); ?>
+                                </small>
+                            <?php endif; ?>
+                        </span>
+                    </li>
+                <?php endforeach; ?>
+            </ol>
+        </nav>
 
-                    <select
-                        name="ranking_city"
-                        required
-                    >
-                        <option value="">
-                            <?php echo esc_html__('Choose a city', 'local-directory-framework'); ?>
-                        </option>
-
-                        <?php foreach ($city_terms as $term) : ?>
-                            <option
-                                value="<?php echo esc_attr($term->slug); ?>"
-                                <?php selected(
-                                    $selection['slugs']['city'],
-                                    $term->slug
-                                ); ?>
-                            >
-                                <?php echo esc_html($term->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-
-                <label class="nwmd-ranking-filters__field">
-                    <span>
-                        <?php echo esc_html__('Category', 'local-directory-framework'); ?>
-                    </span>
-
-                    <select
-                        name="ranking_category"
-                        required
-                    >
-                        <option value="">
-                            <?php echo esc_html__('Choose a category', 'local-directory-framework'); ?>
-                        </option>
-
-                        <?php foreach ($category_terms as $term) : ?>
-                            <option
-                                value="<?php echo esc_attr($term->slug); ?>"
-                                <?php selected(
-                                    $selection['slugs']['category'],
-                                    $term->slug
-                                ); ?>
-                            >
-                                <?php echo esc_html($term->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-
-                <label class="nwmd-ranking-filters__field">
-                    <span>
-                        <?php echo esc_html__('Specialty', 'local-directory-framework'); ?>
-                    </span>
-
-                    <select name="ranking_specialty">
-                        <option value="">
-                            <?php echo esc_html__('All specialties', 'local-directory-framework'); ?>
-                        </option>
-
-                        <?php foreach ($specialty_terms as $term) : ?>
-                            <option
-                                value="<?php echo esc_attr($term->slug); ?>"
-                                <?php selected(
-                                    $selection['slugs']['specialty'],
-                                    $term->slug
-                                ); ?>
-                            >
-                                <?php echo esc_html($term->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-            </div>
-
-            <div class="nwmd-ranking-filters__actions">
-                <button
-                    class="nwmd-ranking-filters__submit"
-                    type="submit"
-                >
-                    <?php echo esc_html__('View Top 10', 'local-directory-framework'); ?>
-                </button>
-
-                <?php if (!empty(array_filter($selection['slugs']))) : ?>
-                    <a
-                        class="nwmd-ranking-filters__clear"
-                        href="<?php echo esc_url(
-                            nwmd_directory_get_public_rankings_url()
-                        ); ?>"
-                    >
-                        <?php echo esc_html__('Clear Selection', 'local-directory-framework'); ?>
-                    </a>
-                <?php endif; ?>
-            </div>
-        </form>
-
-        <?php if (!empty($selection['invalid'])) : ?>
+        <?php if ('invalid' === $step) : ?>
 
             <div
                 class="nwmd-request-notice nwmd-request-notice--error"
@@ -271,171 +255,476 @@ if (!empty($selection['ready'])) {
                 <p>
                     <?php
                     echo esc_html__(
-                        'Choose a valid state, city, category, and specialty combination.',
+                        'That ranking selection is not valid. Start again and choose one of the published options.',
                         'local-directory-framework'
                     );
                     ?>
                 </p>
             </div>
 
-        <?php elseif (empty($selection['ready'])) : ?>
+            <p class="nwmd-guided-actions">
+                <a
+                    class="nwmd-guided-actions__primary"
+                    href="<?php echo esc_url(
+                        nwmd_directory_get_public_rankings_url()
+                    ); ?>"
+                >
+                    <?php echo esc_html__('Start Over', 'local-directory-framework'); ?>
+                </a>
+            </p>
 
-            <div class="nwmd-directory__empty">
-                <h2>
-                    <?php echo esc_html__('Choose your ranking area.', 'local-directory-framework'); ?>
-                </h2>
-
-                <p>
-                    <?php
-                    echo esc_html__(
-                        'Select a state, city, and category. Specialty is optional.',
-                        'local-directory-framework'
-                    );
-                    ?>
-                </p>
-            </div>
-
-        <?php elseif (empty($entries)) : ?>
-
-            <div class="nwmd-directory__empty">
-                <h2>
-                    <?php echo esc_html__('No published rankings matched.', 'local-directory-framework'); ?>
-                </h2>
-
-                <p>
-                    <?php
-                    echo esc_html__(
-                        'Try another specialty or choose a different location and category.',
-                        'local-directory-framework'
-                    );
-                    ?>
-                </p>
-            </div>
-
-        <?php else : ?>
+        <?php elseif ('category' === $step) : ?>
 
             <section
-                class="nwmd-ranking-results-section"
-                aria-labelledby="nwmd-ranking-results-title"
+                class="nwmd-guided-step"
+                aria-labelledby="nwmd-guided-step-title"
             >
-                <header class="nwmd-ranking-results-section__header">
+                <header class="nwmd-guided-step__header">
                     <p class="nwmd-directory__eyebrow">
-                        <?php echo esc_html($period->period_label); ?>
+                        <?php echo esc_html__('Step 1 of 4', 'local-directory-framework'); ?>
                     </p>
 
-                    <h2
-                        class="nwmd-ranking-results-section__title"
-                        id="nwmd-ranking-results-title"
-                    >
-                        <?php
-                        echo esc_html(
-                            implode(
-                                ' · ',
-                                $result_labels
-                            )
-                        );
-                        ?>
+                    <h2 id="nwmd-guided-step-title">
+                        <?php echo esc_html__('What type of business are you looking for?', 'local-directory-framework'); ?>
                     </h2>
+
+                    <p>
+                        <?php echo esc_html__('Choose one business category.', 'local-directory-framework'); ?>
+                    </p>
                 </header>
 
-                <ol class="nwmd-ranking-results">
-                    <?php foreach ($entries as $entry) : ?>
-                        <?php
-                        $business = get_post(
-                            absint($entry->business_post_id)
-                        );
-
-                        if (
-                            !($business instanceof WP_Post) ||
-                            'publish' !== $business->post_status
-                        ) {
-                            continue;
-                        }
-
-                        $permalink = get_permalink(
-                            $business->ID
-                        );
-
-                        $excerpt = get_the_excerpt(
-                            $business
-                        );
-
-                        if ('' === trim($excerpt)) {
-                            $excerpt = wp_trim_words(
-                                wp_strip_all_tags(
-                                    $business->post_content
-                                ),
-                                28
-                            );
-                        }
-                        ?>
-
-                        <li class="nwmd-ranking-result">
-                            <div
-                                class="nwmd-ranking-result__position"
-                                aria-label="<?php echo esc_attr(
-                                    sprintf(
-                                        /* translators: %d: Ranking position. */
-                                        __(
-                                            'Rank %d',
-                                            'local-directory-framework'
-                                        ),
-                                        absint($entry->rank_position)
+                <?php if (empty($step_terms)) : ?>
+                    <div class="nwmd-directory__empty">
+                        <h3>
+                            <?php echo esc_html__('No published categories are available.', 'local-directory-framework'); ?>
+                        </h3>
+                    </div>
+                <?php else : ?>
+                    <div class="nwmd-guided-options">
+                        <?php foreach ($step_terms as $term) : ?>
+                            <a
+                                class="nwmd-guided-option"
+                                href="<?php echo esc_url(
+                                    nwmd_directory_get_public_ranking_navigation_url(
+                                        [
+                                            'ranking_category' => $term->slug,
+                                        ]
                                     )
                                 ); ?>"
                             >
-                                <?php echo esc_html($entry->rank_position); ?>
-                            </div>
+                                <strong>
+                                    <?php echo esc_html($term->name); ?>
+                                </strong>
+                                <span>
+                                    <?php echo esc_html__('Choose category', 'local-directory-framework'); ?>
+                                </span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </section>
 
-                            <?php if (has_post_thumbnail($business->ID)) : ?>
-                                <a
-                                    class="nwmd-ranking-result__image"
-                                    href="<?php echo esc_url($permalink); ?>"
+        <?php elseif ('state' === $step) : ?>
+
+            <section
+                class="nwmd-guided-step"
+                aria-labelledby="nwmd-guided-step-title"
+            >
+                <header class="nwmd-guided-step__header">
+                    <p class="nwmd-directory__eyebrow">
+                        <?php echo esc_html__('Step 2 of 4', 'local-directory-framework'); ?>
+                    </p>
+
+                    <h2 id="nwmd-guided-step-title">
+                        <?php echo esc_html__('Which state should we search?', 'local-directory-framework'); ?>
+                    </h2>
+
+                    <p>
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s: Selected category. */
+                                __('Category: %s', 'local-directory-framework'),
+                                $category_term->name
+                            )
+                        );
+                        ?>
+                    </p>
+                </header>
+
+                <?php if (empty($step_terms)) : ?>
+                    <div class="nwmd-directory__empty">
+                        <h3>
+                            <?php echo esc_html__('No published states match this category.', 'local-directory-framework'); ?>
+                        </h3>
+                    </div>
+                <?php else : ?>
+                    <div class="nwmd-guided-options">
+                        <?php foreach ($step_terms as $term) : ?>
+                            <a
+                                class="nwmd-guided-option"
+                                href="<?php echo esc_url(
+                                    nwmd_directory_get_public_ranking_navigation_url(
+                                        [
+                                            'ranking_category' => $category_term->slug,
+                                            'ranking_state'    => $term->slug,
+                                        ]
+                                    )
+                                ); ?>"
+                            >
+                                <strong>
+                                    <?php echo esc_html($term->name); ?>
+                                </strong>
+                                <span>
+                                    <?php echo esc_html__('Choose state', 'local-directory-framework'); ?>
+                                </span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <p class="nwmd-guided-actions">
+                    <a
+                        class="nwmd-guided-actions__secondary"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_public_rankings_url()
+                        ); ?>"
+                    >
+                        <?php echo esc_html__('← Change Category', 'local-directory-framework'); ?>
+                    </a>
+                </p>
+            </section>
+
+        <?php elseif ('city' === $step) : ?>
+
+            <section
+                class="nwmd-guided-step"
+                aria-labelledby="nwmd-guided-step-title"
+            >
+                <header class="nwmd-guided-step__header">
+                    <p class="nwmd-directory__eyebrow">
+                        <?php echo esc_html__('Step 3 of 4', 'local-directory-framework'); ?>
+                    </p>
+
+                    <h2 id="nwmd-guided-step-title">
+                        <?php echo esc_html__('Which city should we use?', 'local-directory-framework'); ?>
+                    </h2>
+
+                    <p>
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: 1: Category. 2: State. */
+                                __('%1$s in %2$s', 'local-directory-framework'),
+                                $category_term->name,
+                                $state_term->name
+                            )
+                        );
+                        ?>
+                    </p>
+                </header>
+
+                <?php if (empty($step_terms)) : ?>
+                    <div class="nwmd-directory__empty">
+                        <h3>
+                            <?php echo esc_html__('No published cities match this selection.', 'local-directory-framework'); ?>
+                        </h3>
+                    </div>
+                <?php else : ?>
+                    <div class="nwmd-guided-options">
+                        <?php foreach ($step_terms as $term) : ?>
+                            <a
+                                class="nwmd-guided-option"
+                                href="<?php echo esc_url(
+                                    nwmd_directory_get_public_ranking_navigation_url(
+                                        [
+                                            'ranking_category' => $category_term->slug,
+                                            'ranking_state'    => $state_term->slug,
+                                            'ranking_city'     => $term->slug,
+                                        ]
+                                    )
+                                ); ?>"
+                            >
+                                <strong>
+                                    <?php echo esc_html($term->name); ?>
+                                </strong>
+                                <span>
+                                    <?php echo esc_html__('Choose city', 'local-directory-framework'); ?>
+                                </span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <p class="nwmd-guided-actions">
+                    <a
+                        class="nwmd-guided-actions__secondary"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_public_ranking_navigation_url(
+                                $category_args
+                            )
+                        ); ?>"
+                    >
+                        <?php echo esc_html__('← Change State', 'local-directory-framework'); ?>
+                    </a>
+                </p>
+            </section>
+
+        <?php elseif ('specialty' === $step) : ?>
+
+            <section
+                class="nwmd-guided-step"
+                aria-labelledby="nwmd-guided-step-title"
+            >
+                <header class="nwmd-guided-step__header">
+                    <p class="nwmd-directory__eyebrow">
+                        <?php echo esc_html__('Step 4 of 4', 'local-directory-framework'); ?>
+                    </p>
+
+                    <h2 id="nwmd-guided-step-title">
+                        <?php echo esc_html__('Choose a specialty.', 'local-directory-framework'); ?>
+                    </h2>
+
+                    <p>
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: 1: Category. 2: City. 3: State. */
+                                __('%1$s in %2$s, %3$s', 'local-directory-framework'),
+                                $category_term->name,
+                                $city_term->name,
+                                $state_term->name
+                            )
+                        );
+                        ?>
+                    </p>
+                </header>
+
+                <?php if (!$all_specialties_available && empty($step_terms)) : ?>
+                    <div class="nwmd-directory__empty">
+                        <h3>
+                            <?php echo esc_html__('No published specialties match this selection.', 'local-directory-framework'); ?>
+                        </h3>
+                    </div>
+                <?php else : ?>
+                    <div class="nwmd-guided-options">
+                        <?php if ($all_specialties_available) : ?>
+                            <a
+                                class="nwmd-guided-option nwmd-guided-option--featured"
+                                href="<?php echo esc_url(
+                                    nwmd_directory_get_public_ranking_navigation_url(
+                                        array_merge(
+                                            $city_args,
+                                            [
+                                                'ranking_specialty' => 'all',
+                                            ]
+                                        )
+                                    )
+                                ); ?>"
+                            >
+                                <strong>
+                                    <?php echo esc_html__('All specialties', 'local-directory-framework'); ?>
+                                </strong>
+                                <span>
+                                    <?php echo esc_html__('View the general category ranking', 'local-directory-framework'); ?>
+                                </span>
+                            </a>
+                        <?php endif; ?>
+
+                        <?php foreach ($step_terms as $term) : ?>
+                            <a
+                                class="nwmd-guided-option"
+                                href="<?php echo esc_url(
+                                    nwmd_directory_get_public_ranking_navigation_url(
+                                        array_merge(
+                                            $city_args,
+                                            [
+                                                'ranking_specialty' => $term->slug,
+                                            ]
+                                        )
+                                    )
+                                ); ?>"
+                            >
+                                <strong>
+                                    <?php echo esc_html($term->name); ?>
+                                </strong>
+                                <span>
+                                    <?php echo esc_html__('View specialty ranking', 'local-directory-framework'); ?>
+                                </span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <p class="nwmd-guided-actions">
+                    <a
+                        class="nwmd-guided-actions__secondary"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_public_ranking_navigation_url(
+                                $state_args
+                            )
+                        ); ?>"
+                    >
+                        <?php echo esc_html__('← Change City', 'local-directory-framework'); ?>
+                    </a>
+                </p>
+            </section>
+
+        <?php elseif ('results' === $step) : ?>
+
+            <?php if (empty($entries)) : ?>
+
+                <div class="nwmd-directory__empty">
+                    <h2>
+                        <?php echo esc_html__('No published rankings matched.', 'local-directory-framework'); ?>
+                    </h2>
+
+                    <p>
+                        <?php
+                        echo esc_html__(
+                            'Choose another specialty or return to an earlier step.',
+                            'local-directory-framework'
+                        );
+                        ?>
+                    </p>
+                </div>
+
+            <?php else : ?>
+
+                <section
+                    class="nwmd-ranking-results-section"
+                    aria-labelledby="nwmd-ranking-results-title"
+                >
+                    <header class="nwmd-ranking-results-section__header">
+                        <p class="nwmd-directory__eyebrow">
+                            <?php echo esc_html($period->period_label); ?>
+                        </p>
+
+                        <h2
+                            class="nwmd-ranking-results-section__title"
+                            id="nwmd-ranking-results-title"
+                        >
+                            <?php echo esc_html(implode(' · ', $result_labels)); ?>
+                        </h2>
+                    </header>
+
+                    <ol class="nwmd-ranking-results">
+                        <?php foreach ($entries as $entry) : ?>
+                            <?php
+                            $business = get_post(
+                                absint($entry->business_post_id)
+                            );
+
+                            if (
+                                !($business instanceof WP_Post) ||
+                                'publish' !== $business->post_status
+                            ) {
+                                continue;
+                            }
+
+                            $permalink = get_permalink(
+                                $business->ID
+                            );
+
+                            $excerpt = get_the_excerpt(
+                                $business
+                            );
+
+                            if ('' === trim($excerpt)) {
+                                $excerpt = wp_trim_words(
+                                    wp_strip_all_tags(
+                                        $business->post_content
+                                    ),
+                                    28
+                                );
+                            }
+                            ?>
+
+                            <li class="nwmd-ranking-result">
+                                <div
+                                    class="nwmd-ranking-result__position"
                                     aria-label="<?php echo esc_attr(
-                                        $business->post_title
+                                        sprintf(
+                                            /* translators: %d: Ranking position. */
+                                            __('Rank %d', 'local-directory-framework'),
+                                            absint($entry->rank_position)
+                                        )
                                     ); ?>"
                                 >
-                                    <?php
-                                    echo wp_kses_post(
-                                        get_the_post_thumbnail(
-                                            $business->ID,
-                                            'medium_large'
-                                        )
-                                    );
-                                    ?>
-                                </a>
-                            <?php endif; ?>
+                                    <?php echo esc_html($entry->rank_position); ?>
+                                </div>
 
-                            <div class="nwmd-ranking-result__content">
-                                <h3 class="nwmd-ranking-result__title">
-                                    <a href="<?php echo esc_url($permalink); ?>">
-                                        <?php echo esc_html($business->post_title); ?>
+                                <?php if (has_post_thumbnail($business->ID)) : ?>
+                                    <a
+                                        class="nwmd-ranking-result__image"
+                                        href="<?php echo esc_url($permalink); ?>"
+                                        aria-label="<?php echo esc_attr($business->post_title); ?>"
+                                    >
+                                        <?php
+                                        echo wp_kses_post(
+                                            get_the_post_thumbnail(
+                                                $business->ID,
+                                                'medium_large'
+                                            )
+                                        );
+                                        ?>
                                     </a>
-                                </h3>
-
-                                <?php if ('' !== trim($excerpt)) : ?>
-                                    <p class="nwmd-ranking-result__excerpt">
-                                        <?php echo esc_html($excerpt); ?>
-                                    </p>
                                 <?php endif; ?>
 
-                                <?php if ('' !== trim($entry->editorial_note)) : ?>
-                                    <p class="nwmd-ranking-result__note">
-                                        <?php echo esc_html($entry->editorial_note); ?>
-                                    </p>
-                                <?php endif; ?>
+                                <div class="nwmd-ranking-result__content">
+                                    <h3 class="nwmd-ranking-result__title">
+                                        <a href="<?php echo esc_url($permalink); ?>">
+                                            <?php echo esc_html($business->post_title); ?>
+                                        </a>
+                                    </h3>
 
-                                <a
-                                    class="nwmd-business-card__link"
-                                    href="<?php echo esc_url($permalink); ?>"
-                                >
-                                    <?php echo esc_html__('View Business', 'local-directory-framework'); ?>
-                                </a>
-                            </div>
-                        </li>
-                    <?php endforeach; ?>
-                </ol>
-            </section>
+                                    <?php if ('' !== trim($excerpt)) : ?>
+                                        <p class="nwmd-ranking-result__excerpt">
+                                            <?php echo esc_html($excerpt); ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <?php if ('' !== trim($entry->editorial_note)) : ?>
+                                        <p class="nwmd-ranking-result__note">
+                                            <?php echo esc_html($entry->editorial_note); ?>
+                                        </p>
+                                    <?php endif; ?>
+
+                                    <a
+                                        class="nwmd-business-card__link"
+                                        href="<?php echo esc_url($permalink); ?>"
+                                    >
+                                        <?php echo esc_html__('View Business', 'local-directory-framework'); ?>
+                                    </a>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                    </ol>
+                </section>
+
+            <?php endif; ?>
+
+            <p class="nwmd-guided-actions">
+                <a
+                    class="nwmd-guided-actions__secondary"
+                    href="<?php echo esc_url(
+                        nwmd_directory_get_public_ranking_navigation_url(
+                            $city_args
+                        )
+                    ); ?>"
+                >
+                    <?php echo esc_html__('← Change Specialty', 'local-directory-framework'); ?>
+                </a>
+
+                <a
+                    class="nwmd-guided-actions__secondary"
+                    href="<?php echo esc_url(
+                        nwmd_directory_get_public_rankings_url()
+                    ); ?>"
+                >
+                    <?php echo esc_html__('Start Over', 'local-directory-framework'); ?>
+                </a>
+            </p>
 
         <?php endif; ?>
 

@@ -69,7 +69,7 @@ $active_filters = array_filter(
                     nwmd_directory_get_public_rankings_url()
                 ); ?>"
             >
-                <?php echo esc_html__('View Top 10 Rankings', 'local-directory-framework'); ?>
+                <?php echo esc_html__('Find Top Businesses', 'local-directory-framework'); ?>
             </a>
 
             <a
