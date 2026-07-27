@@ -5,6 +5,83 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Return the branded name used for business-request emails.
+ *
+ * @return string
+ */
+function nwmd_directory_get_business_request_mail_name() {
+
+    $site_name = sanitize_text_field(
+        wp_specialchars_decode(
+            get_bloginfo('name'),
+            ENT_QUOTES
+        )
+    );
+
+    return '' !== $site_name
+        ? $site_name
+        : __(
+            'Northwest Monthly',
+            'local-directory-framework'
+        );
+}
+
+/**
+ * Filter the sender name while sending a business-request email.
+ *
+ * @param string $from_name Existing sender name.
+ *
+ * @return string
+ */
+function nwmd_directory_filter_business_request_mail_from_name(
+    $from_name
+) {
+
+    unset($from_name);
+
+    return nwmd_directory_get_business_request_mail_name();
+}
+
+/**
+ * Send one branded business-request email.
+ *
+ * @param string $to      Recipient email.
+ * @param string $subject Email subject.
+ * @param string $message Plain-text message.
+ *
+ * @return bool
+ */
+function nwmd_directory_send_branded_business_request_mail(
+    $to,
+    $subject,
+    $message
+) {
+
+    add_filter(
+        'wp_mail_from_name',
+        'nwmd_directory_filter_business_request_mail_from_name',
+        99
+    );
+
+    $sent = wp_mail(
+        $to,
+        $subject,
+        $message,
+        [
+            'Content-Type: text/plain; charset=UTF-8',
+        ]
+    );
+
+    remove_filter(
+        'wp_mail_from_name',
+        'nwmd_directory_filter_business_request_mail_from_name',
+        99
+    );
+
+    return $sent;
+}
+
+/**
  * Return controlled public business-request types.
  *
  * @return array
@@ -671,12 +748,7 @@ function nwmd_directory_send_business_request_verification_email(
         admin_url('admin-post.php')
     );
 
-    $site_name = sanitize_text_field(
-        wp_specialchars_decode(
-            get_bloginfo('name'),
-            ENT_QUOTES
-        )
-    );
+    $site_name = nwmd_directory_get_business_request_mail_name();
 
     $subject = sprintf(
         /* translators: %s: Website name. */
@@ -699,13 +771,10 @@ function nwmd_directory_send_business_request_verification_email(
         $verification_url
     );
 
-    return wp_mail(
+    return nwmd_directory_send_branded_business_request_mail(
         $email,
         $subject,
-        $message,
-        [
-            'Content-Type: text/plain; charset=UTF-8',
-        ]
+        $message
     );
 }
 
@@ -746,12 +815,7 @@ function nwmd_directory_send_business_request_admin_notification(
         admin_url('edit.php')
     );
 
-    $site_name = sanitize_text_field(
-        wp_specialchars_decode(
-            get_bloginfo('name'),
-            ENT_QUOTES
-        )
-    );
+    $site_name = nwmd_directory_get_business_request_mail_name();
 
     $subject = sprintf(
         /* translators: %s: Website name. */
@@ -776,13 +840,10 @@ function nwmd_directory_send_business_request_admin_notification(
         $admin_url
     );
 
-    wp_mail(
+    nwmd_directory_send_branded_business_request_mail(
         $admin_email,
         $subject,
-        $message,
-        [
-            'Content-Type: text/plain; charset=UTF-8',
-        ]
+        $message
     );
 }
 
