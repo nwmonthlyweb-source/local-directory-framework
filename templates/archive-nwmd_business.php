@@ -549,6 +549,8 @@ if ($city_term instanceof WP_Term) {
             </header>
 
             <?php
+            nwmd_directory_render_advertising_inquiry_notice();
+
             nwmd_directory_render_ad(
                 'results_sponsored',
                 $ad_context
@@ -713,6 +715,10 @@ if ($city_term instanceof WP_Term) {
                             'add_args' => [
                                 'filter_category' =>
                                     $category_term->slug,
+                                'filter_specialty' =>
+                                    $current_specialty,
+                                'filter_state' =>
+                                    $state_term->slug,
                                 'filter_city' =>
                                     $city_term->slug,
                             ],

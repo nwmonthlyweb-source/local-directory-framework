@@ -579,6 +579,9 @@ function nwmd_directory_render_ad(
         $ad->id
     );
 
+    $dialog_id = 'nwmd-advertise-here-'
+        . absint($ad->id);
+
     $image = '';
 
     if ($ad->image_attachment_id > 0) {
@@ -612,6 +615,44 @@ function nwmd_directory_render_ad(
         ); ?>"
         aria-label="<?php echo esc_attr($label); ?>"
     >
+        <?php if ($is_sponsored_result) : ?>
+            <div class="nwmd-ad__topbar">
+                <span class="nwmd-ad__label">
+                    <?php echo esc_html($label); ?>
+                </span>
+
+                <details class="nwmd-ad-menu">
+                    <summary
+                        class="nwmd-ad-menu__toggle"
+                        aria-label="<?php
+                            echo esc_attr__(
+                                'Advertisement options',
+                                'local-directory-framework'
+                            );
+                        ?>"
+                    >
+                        <span aria-hidden="true">&#8942;</span>
+                    </summary>
+
+                    <div class="nwmd-ad-menu__panel">
+                        <button
+                            type="button"
+                            data-nwmd-dialog-open="<?php
+                                echo esc_attr($dialog_id);
+                            ?>"
+                        >
+                            <?php
+                            echo esc_html__(
+                                'Advertise Here',
+                                'local-directory-framework'
+                            );
+                            ?>
+                        </button>
+                    </div>
+                </details>
+            </div>
+        <?php endif; ?>
+
         <a
             class="nwmd-ad__link"
             href="<?php echo esc_url($click_url); ?>"
@@ -625,9 +666,11 @@ function nwmd_directory_render_ad(
             <?php endif; ?>
 
             <span class="nwmd-ad__content">
-                <span class="nwmd-ad__label">
-                    <?php echo esc_html($label); ?>
-                </span>
+                <?php if (!$is_sponsored_result) : ?>
+                    <span class="nwmd-ad__label">
+                        <?php echo esc_html($label); ?>
+                    </span>
+                <?php endif; ?>
 
                 <strong class="nwmd-ad__title">
                     <?php echo esc_html($ad->campaign_name); ?>
@@ -638,12 +681,30 @@ function nwmd_directory_render_ad(
                 </span>
 
                 <span class="nwmd-ad__action">
-                    <?php echo esc_html__('Visit Sponsor', 'local-directory-framework'); ?>
+                    <?php
+                    echo esc_html__(
+                        'Visit Sponsor',
+                        'local-directory-framework'
+                    );
+                    ?>
                 </span>
             </span>
         </a>
     </aside>
+
     <?php
+    if (
+        $is_sponsored_result &&
+        function_exists(
+            'nwmd_directory_render_advertising_inquiry_dialog'
+        )
+    ) {
+        nwmd_directory_render_advertising_inquiry_dialog(
+            $dialog_id,
+            $placement,
+            $context
+        );
+    }
 }
 
 /**

@@ -53,6 +53,12 @@
                 'data-nwmd-dialog-open'
             );
 
+            var parentMenu = button.closest('details');
+
+            if (parentMenu) {
+                parentMenu.removeAttribute('open');
+            }
+
             openDialog(
                 document.getElementById(dialogId)
             );
