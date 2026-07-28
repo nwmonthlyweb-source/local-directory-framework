@@ -87,8 +87,42 @@ $allowed_svg = [
     <?php wp_head(); ?>
 </head>
 
-<body <?php body_class('nwmd-app-body'); ?>>
+<body <?php body_class('nwmd-app-body nwmd-splash-pending'); ?>>
 <?php wp_body_open(); ?>
+
+<div
+    class="nwmd-app-splash"
+    data-nwmd-app-splash
+    role="status"
+    aria-label="<?php
+        echo esc_attr__(
+            'NW Monthly is loading',
+            'local-directory-framework'
+        );
+    ?>"
+>
+    <div class="nwmd-app-splash__content">
+        <span
+            class="nwmd-app-splash__mark"
+            aria-hidden="true"
+        >
+            NW
+        </span>
+
+        <p class="nwmd-app-splash__title">
+            NW Monthly
+        </p>
+
+        <p class="nwmd-app-splash__region">
+            <?php
+            echo esc_html__(
+                'Washington and Oregon',
+                'local-directory-framework'
+            );
+            ?>
+        </p>
+    </div>
+</div>
 
 <main class="nwmd-app-home" id="primary">
     <section class="nwmd-app-home__panel">
