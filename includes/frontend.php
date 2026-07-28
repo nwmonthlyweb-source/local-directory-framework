@@ -5,35 +5,50 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Load directory frontend styles only where needed.
+ * Load only the public styles needed for the current screen.
  */
 function nwmd_directory_enqueue_frontend_assets() {
 
     $is_app_home = is_front_page();
 
-    $is_directory_page =
-        is_post_type_archive('nwmd_business') ||
+    $is_business_archive =
+        is_post_type_archive('nwmd_business');
+
+    $is_other_directory_page =
         is_singular('nwmd_business') ||
         nwmd_directory_is_business_request_page() ||
         nwmd_directory_is_public_rankings_page();
 
-    if (!$is_app_home && !$is_directory_page) {
+    if (
+        !$is_app_home &&
+        !$is_business_archive &&
+        !$is_other_directory_page
+    ) {
         return;
-    }
-
-    if ($is_directory_page) {
-        wp_enqueue_style(
-            'nwmd-directory-frontend',
-            NWMD_DIRECTORY_URL . 'assets/css/frontend.css',
-            [],
-            NWMD_DIRECTORY_VERSION
-        );
     }
 
     if ($is_app_home) {
         wp_enqueue_style(
             'nwmd-directory-app-home',
             NWMD_DIRECTORY_URL . 'assets/css/app-home.css',
+            [],
+            NWMD_DIRECTORY_VERSION
+        );
+    }
+
+    if ($is_business_archive) {
+        wp_enqueue_style(
+            'nwmd-directory-app-list',
+            NWMD_DIRECTORY_URL . 'assets/css/app-directory.css',
+            [],
+            NWMD_DIRECTORY_VERSION
+        );
+    }
+
+    if ($is_other_directory_page) {
+        wp_enqueue_style(
+            'nwmd-directory-frontend',
+            NWMD_DIRECTORY_URL . 'assets/css/frontend.css',
             [],
             NWMD_DIRECTORY_VERSION
         );
@@ -46,6 +61,24 @@ add_action(
 );
 
 /**
+ * Return the business archive URL.
+ *
+ * @return string
+ */
+function nwmd_directory_get_app_archive_url() {
+
+    $archive_url = get_post_type_archive_link(
+        'nwmd_business'
+    );
+
+    if (!$archive_url) {
+        return home_url('/business/');
+    }
+
+    return $archive_url;
+}
+
+/**
  * Return the business archive URL for one category.
  *
  * @param string $category_slug Category slug.
@@ -56,21 +89,39 @@ function nwmd_directory_get_app_category_url(
     $category_slug
 ) {
 
-    $archive_url = get_post_type_archive_link(
-        'nwmd_business'
-    );
-
-    if (!$archive_url) {
-        $archive_url = home_url('/business/');
-    }
-
     return add_query_arg(
         [
             'filter_category' => sanitize_title(
                 $category_slug
             ),
         ],
-        $archive_url
+        nwmd_directory_get_app_archive_url()
+    );
+}
+
+/**
+ * Return the business archive URL for one category and city.
+ *
+ * @param string $category_slug Category slug.
+ * @param string $city_slug     City slug.
+ *
+ * @return string
+ */
+function nwmd_directory_get_app_city_url(
+    $category_slug,
+    $city_slug
+) {
+
+    return add_query_arg(
+        [
+            'filter_category' => sanitize_title(
+                $category_slug
+            ),
+            'filter_city' => sanitize_title(
+                $city_slug
+            ),
+        ],
+        nwmd_directory_get_app_archive_url()
     );
 }
 
@@ -93,15 +144,6 @@ function nwmd_directory_template_include($template) {
     }
 
     if (is_post_type_archive('nwmd_business')) {
-
-        $theme_template = locate_template(
-            ['archive-nwmd_business.php']
-        );
-
-        if (!empty($theme_template)) {
-            return $theme_template;
-        }
-
         $plugin_template = NWMD_DIRECTORY_PATH
             . 'templates/archive-nwmd_business.php';
 

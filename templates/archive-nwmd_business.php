@@ -4,305 +4,529 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-get_header();
+$current_category =
+    nwmd_directory_get_archive_filter_value(
+        'filter_category'
+    );
 
-$archive_title = post_type_archive_title(
-    '',
-    false
-);
+$current_city =
+    nwmd_directory_get_archive_filter_value(
+        'filter_city'
+    );
 
-$archive_url = get_post_type_archive_link(
-    'nwmd_business'
-);
+$category_term = '';
 
-$current_category = nwmd_directory_get_archive_filter_value(
-    'filter_category'
-);
+if ('' !== $current_category) {
+    $category_term = get_term_by(
+        'slug',
+        $current_category,
+        'nwmd_category'
+    );
+}
 
-$current_specialty = nwmd_directory_get_archive_filter_value(
-    'filter_specialty'
-);
+if (!$category_term instanceof WP_Term) {
+    $category_term = null;
+    $current_category = '';
+}
 
-$current_city = nwmd_directory_get_archive_filter_value(
-    'filter_city'
-);
+$city_term = '';
 
-$category_terms = nwmd_directory_get_archive_filter_terms(
-    'nwmd_category'
-);
+if ('' !== $current_city) {
+    $city_term = get_term_by(
+        'slug',
+        $current_city,
+        'nwmd_city'
+    );
+}
 
-$specialty_terms = nwmd_directory_get_archive_filter_terms(
-    'nwmd_specialty'
-);
+if (!$city_term instanceof WP_Term) {
+    $city_term = null;
+    $current_city = '';
+}
 
-$city_terms = nwmd_directory_get_archive_filter_terms(
-    'nwmd_city'
-);
+$categories = nwmd_directory_get_launch_categories();
+$regions = nwmd_directory_get_launch_regions();
 
-$active_filters = array_filter(
-    [
-        'filter_category'  => $current_category,
-        'filter_specialty' => $current_specialty,
-        'filter_city'      => $current_city,
-    ]
-);
+$manage_url =
+    nwmd_directory_get_business_request_url();
+
+$back_url = home_url('/');
+
+if (
+    $category_term instanceof WP_Term &&
+    $city_term instanceof WP_Term
+) {
+    $back_url =
+        nwmd_directory_get_app_category_url(
+            $category_term->slug
+        );
+}
+
+$state_abbreviation = '';
+
+if ($city_term instanceof WP_Term) {
+    $state_abbreviation = sanitize_text_field(
+        get_term_meta(
+            $city_term->term_id,
+            'nwmd_state_abbreviation',
+            true
+        )
+    );
+}
+
+$ad_context = [
+    'state_term_ids' => [],
+    'city_term_ids' => [],
+    'category_term_ids' => [],
+    'specialty_term_ids' => [],
+];
+
+if ($category_term instanceof WP_Term) {
+    $ad_context['category_term_ids'][] =
+        absint($category_term->term_id);
+}
+
+if ($city_term instanceof WP_Term) {
+    $ad_context['city_term_ids'][] =
+        absint($city_term->term_id);
+
+    $state_term_id = absint(
+        get_term_meta(
+            $city_term->term_id,
+            'nwmd_state_term_id',
+            true
+        )
+    );
+
+    if ($state_term_id > 0) {
+        $ad_context['state_term_ids'][] =
+            $state_term_id;
+    }
+}
 ?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+    <meta charset="<?php bloginfo('charset'); ?>">
 
-<main class="nwmd-directory" id="primary">
-    <section class="nwmd-directory__intro">
-        <p class="nwmd-directory__eyebrow">
-            <?php echo esc_html__('Northwest Monthly Directory', 'local-directory-framework'); ?>
-        </p>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
 
-        <h1 class="nwmd-directory__title">
-            <?php echo esc_html($archive_title); ?>
-        </h1>
+    <?php wp_head(); ?>
+</head>
 
-        <p class="nwmd-directory__description">
-            <?php echo esc_html__('Discover local businesses serving Portland and nearby Oregon communities.', 'local-directory-framework'); ?>
-        </p>
+<body <?php body_class('nwmd-app-body nwmd-directory-app-body'); ?>>
+<?php wp_body_open(); ?>
 
-        <div class="nwmd-directory__actions">
+<main class="nwmd-app-shell" id="primary">
+    <section class="nwmd-app-shell__panel">
+        <header class="nwmd-app-bar">
             <a
-                class="nwmd-directory__rankings-link"
-                href="<?php echo esc_url(
-                    nwmd_directory_get_public_rankings_url()
-                ); ?>"
+                class="nwmd-app-bar__back"
+                href="<?php echo esc_url($back_url); ?>"
             >
-                <?php echo esc_html__('Find Top Businesses', 'local-directory-framework'); ?>
-            </a>
-
-            <a
-                class="nwmd-directory__manage-link"
-                href="<?php echo esc_url(
-                    nwmd_directory_get_business_request_url()
-                ); ?>"
-            >
-                <?php echo esc_html__('Manage a Business', 'local-directory-framework'); ?>
-            </a>
-        </div>
-    </section>
-
-    <?php if (!empty($archive_url)) : ?>
-        <form
-            class="nwmd-directory-filters"
-            action="<?php echo esc_url($archive_url); ?>"
-            method="get"
-        >
-            <div class="nwmd-directory-filters__fields">
-                <label class="nwmd-directory-filters__field">
-                    <span>
-                        <?php echo esc_html__('Category', 'local-directory-framework'); ?>
-                    </span>
-
-                    <select name="filter_category">
-                        <option value="">
-                            <?php echo esc_html__('All Categories', 'local-directory-framework'); ?>
-                        </option>
-
-                        <?php foreach ($category_terms as $term) : ?>
-                            <option
-                                value="<?php echo esc_attr($term->slug); ?>"
-                                <?php selected($current_category, $term->slug); ?>
-                            >
-                                <?php echo esc_html($term->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-
-                <label class="nwmd-directory-filters__field">
-                    <span>
-                        <?php echo esc_html__('Specialty', 'local-directory-framework'); ?>
-                    </span>
-
-                    <select name="filter_specialty">
-                        <option value="">
-                            <?php echo esc_html__('All Specialties', 'local-directory-framework'); ?>
-                        </option>
-
-                        <?php foreach ($specialty_terms as $term) : ?>
-                            <option
-                                value="<?php echo esc_attr($term->slug); ?>"
-                                <?php selected($current_specialty, $term->slug); ?>
-                            >
-                                <?php echo esc_html($term->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-
-                <label class="nwmd-directory-filters__field">
-                    <span>
-                        <?php echo esc_html__('City', 'local-directory-framework'); ?>
-                    </span>
-
-                    <select name="filter_city">
-                        <option value="">
-                            <?php echo esc_html__('All Cities', 'local-directory-framework'); ?>
-                        </option>
-
-                        <?php foreach ($city_terms as $term) : ?>
-                            <option
-                                value="<?php echo esc_attr($term->slug); ?>"
-                                <?php selected($current_city, $term->slug); ?>
-                            >
-                                <?php echo esc_html($term->name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-            </div>
-
-            <div class="nwmd-directory-filters__actions">
-                <button
-                    class="nwmd-directory-filters__submit"
-                    type="submit"
-                >
-                    <?php echo esc_html__('Apply Filters', 'local-directory-framework'); ?>
-                </button>
-
-                <?php if (!empty($active_filters)) : ?>
-                    <a
-                        class="nwmd-directory-filters__clear"
-                        href="<?php echo esc_url($archive_url); ?>"
-                    >
-                        <?php echo esc_html__('Clear Filters', 'local-directory-framework'); ?>
-                    </a>
-                <?php endif; ?>
-            </div>
-        </form>
-    <?php endif; ?>
-
-    <?php if (have_posts()) : ?>
-
-        <div class="nwmd-directory__grid">
-            <?php
-            while (have_posts()) :
-                the_post();
-
-                $post_id = get_the_ID();
-
-                $categories = nwmd_directory_get_business_term_names(
-                    $post_id,
-                    'nwmd_category'
-                );
-
-                $cities = nwmd_directory_get_business_term_names(
-                    $post_id,
-                    'nwmd_city'
-                );
-
-                $states = nwmd_directory_get_business_term_names(
-                    $post_id,
-                    'nwmd_state'
-                );
-
-                $locations = array_merge(
-                    $cities,
-                    $states
+                <span aria-hidden="true">←</span>
+                <?php
+                echo esc_html__(
+                    'Back',
+                    'local-directory-framework'
                 );
                 ?>
+            </a>
 
-                <article <?php post_class('nwmd-business-card'); ?>>
-                    <?php if (has_post_thumbnail()) : ?>
-                        <a
-                            class="nwmd-business-card__image"
-                            href="<?php echo esc_url(get_permalink()); ?>"
-                            aria-label="<?php echo esc_attr(get_the_title()); ?>"
-                        >
-                            <?php
-                            echo wp_kses_post(
-                                get_the_post_thumbnail(
-                                    $post_id,
-                                    'medium_large'
-                                )
-                            );
-                            ?>
-                        </a>
-                    <?php endif; ?>
+            <a
+                class="nwmd-app-bar__brand"
+                href="<?php echo esc_url(home_url('/')); ?>"
+            >
+                <span
+                    class="nwmd-app-bar__mark"
+                    aria-hidden="true"
+                >
+                    NW
+                </span>
 
-                    <div class="nwmd-business-card__content">
-                        <?php if (!empty($categories)) : ?>
-                            <p class="nwmd-business-card__category">
-                                <?php echo esc_html(implode(' · ', $categories)); ?>
-                            </p>
-                        <?php endif; ?>
+                <span>NW Monthly</span>
+            </a>
+        </header>
 
-                        <h2 class="nwmd-business-card__title">
-                            <a href="<?php echo esc_url(get_permalink()); ?>">
-                                <?php echo esc_html(get_the_title()); ?>
-                            </a>
-                        </h2>
+        <?php if (!$category_term instanceof WP_Term) : ?>
 
-                        <?php if (!empty($locations)) : ?>
-                            <p class="nwmd-business-card__location">
-                                <?php echo esc_html(implode(', ', $locations)); ?>
-                            </p>
-                        <?php endif; ?>
+            <header class="nwmd-app-heading">
+                <p class="nwmd-app-heading__eyebrow">
+                    <?php
+                    echo esc_html__(
+                        'Washington · Oregon',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
 
-                        <p class="nwmd-business-card__excerpt">
+                <h1>
+                    <?php
+                    echo esc_html__(
+                        'Choose a category',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h1>
+            </header>
+
+            <nav class="nwmd-app-button-grid">
+                <?php foreach ($categories as $category) : ?>
+                    <a
+                        class="nwmd-app-button"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_app_category_url(
+                                $category['slug']
+                            )
+                        ); ?>"
+                    >
+                        <strong>
+                            <?php echo esc_html($category['name']); ?>
+                        </strong>
+
+                        <span aria-hidden="true">→</span>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+
+        <?php elseif (!$city_term instanceof WP_Term) : ?>
+
+            <header class="nwmd-app-heading">
+                <p class="nwmd-app-heading__eyebrow">
+                    <?php echo esc_html($category_term->name); ?>
+                </p>
+
+                <h1>
+                    <?php
+                    echo esc_html__(
+                        'Choose your city',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h1>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Tap one city to see local businesses.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </header>
+
+            <div class="nwmd-city-groups">
+                <?php foreach ($regions as $region) : ?>
+                    <section class="nwmd-city-group">
+                        <h2>
                             <?php
                             echo esc_html(
-                                wp_trim_words(
-                                    get_the_excerpt(),
-                                    28
-                                )
+                                $region['name']
+                                . ' · '
+                                . $region['abbreviation']
                             );
                             ?>
-                        </p>
+                        </h2>
 
-                        <a
-                            class="nwmd-business-card__link"
-                            href="<?php echo esc_url(get_permalink()); ?>"
-                        >
-                            <?php echo esc_html__('View Business', 'local-directory-framework'); ?>
-                        </a>
-                    </div>
-                </article>
+                        <div class="nwmd-city-grid">
+                            <?php foreach ($region['cities'] as $city) : ?>
+                                <a
+                                    class="nwmd-city-button"
+                                    href="<?php echo esc_url(
+                                        nwmd_directory_get_app_city_url(
+                                            $category_term->slug,
+                                            $city['slug']
+                                        )
+                                    ); ?>"
+                                >
+                                    <strong>
+                                        <?php echo esc_html($city['name']); ?>
+                                    </strong>
 
-            <?php endwhile; ?>
-        </div>
+                                    <span>
+                                        <?php
+                                        echo esc_html(
+                                            $region['abbreviation']
+                                        );
+                                        ?>
+                                    </span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endforeach; ?>
+            </div>
 
-        <div class="nwmd-directory__pagination">
+        <?php else : ?>
+
+            <header class="nwmd-app-heading">
+                <p class="nwmd-app-heading__eyebrow">
+                    <?php
+                    echo esc_html(
+                        $city_term->name
+                        . (
+                            '' !== $state_abbreviation
+                                ? ', ' . $state_abbreviation
+                                : ''
+                        )
+                    );
+                    ?>
+                </p>
+
+                <h1>
+                    <?php echo esc_html($category_term->name); ?>
+                </h1>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Tap a business for details.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </header>
+
             <?php
-            the_posts_pagination(
-                [
-                    'mid_size'  => 1,
-                    'prev_text' => esc_html__('Previous', 'local-directory-framework'),
-                    'next_text' => esc_html__('Next', 'local-directory-framework'),
-                    'add_args'  => $active_filters,
-                ]
+            nwmd_directory_render_ad(
+                'results_sponsored',
+                $ad_context
             );
             ?>
-        </div>
 
-    <?php else : ?>
+            <?php if (have_posts()) : ?>
 
-        <div class="nwmd-directory__empty">
-            <h2>
-                <?php
-                echo esc_html(
-                    !empty($active_filters)
-                        ? __('No businesses matched these filters.', 'local-directory-framework')
-                        : __('No published businesses yet.', 'local-directory-framework')
-                );
-                ?>
-            </h2>
+                <div class="nwmd-business-list">
+                    <?php while (have_posts()) : ?>
+                        <?php
+                        the_post();
 
+                        $post_id = get_the_ID();
+
+                        $specialties =
+                            nwmd_directory_get_business_term_names(
+                                $post_id,
+                                'nwmd_specialty'
+                            );
+
+                        $phone = sanitize_text_field(
+                            nwmd_directory_get_business_record_meta(
+                                $post_id,
+                                'public_phone'
+                            )
+                        );
+
+                        $phone_href = preg_replace(
+                            '/[^0-9+]/',
+                            '',
+                            $phone
+                        );
+
+                        $website = esc_url_raw(
+                            nwmd_directory_get_business_record_meta(
+                                $post_id,
+                                'website_url'
+                            )
+                        );
+
+                        $excerpt = get_the_excerpt();
+
+                        if ('' === trim($excerpt)) {
+                            $excerpt = wp_trim_words(
+                                wp_strip_all_tags(
+                                    get_the_content()
+                                ),
+                                20
+                            );
+                        }
+                        ?>
+
+                        <article <?php post_class('nwmd-business-row'); ?>>
+                            <div class="nwmd-business-row__content">
+                                <?php if (!empty($specialties)) : ?>
+                                    <p class="nwmd-business-row__type">
+                                        <?php
+                                        echo esc_html(
+                                            implode(
+                                                ' · ',
+                                                $specialties
+                                            )
+                                        );
+                                        ?>
+                                    </p>
+                                <?php endif; ?>
+
+                                <h2>
+                                    <a href="<?php echo esc_url(get_permalink()); ?>">
+                                        <?php echo esc_html(get_the_title()); ?>
+                                    </a>
+                                </h2>
+
+                                <p class="nwmd-business-row__location">
+                                    <?php
+                                    echo esc_html(
+                                        $city_term->name
+                                        . (
+                                            '' !== $state_abbreviation
+                                                ? ', ' . $state_abbreviation
+                                                : ''
+                                        )
+                                    );
+                                    ?>
+                                </p>
+
+                                <?php if ('' !== trim($excerpt)) : ?>
+                                    <p class="nwmd-business-row__excerpt">
+                                        <?php
+                                        echo esc_html(
+                                            wp_trim_words(
+                                                $excerpt,
+                                                22
+                                            )
+                                        );
+                                        ?>
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="nwmd-business-row__actions">
+                                <?php if ('' !== $phone_href) : ?>
+                                    <a
+                                        href="<?php echo esc_url(
+                                            'tel:' . $phone_href
+                                        ); ?>"
+                                    >
+                                        <?php
+                                        echo esc_html__(
+                                            'Call',
+                                            'local-directory-framework'
+                                        );
+                                        ?>
+                                    </a>
+                                <?php endif; ?>
+
+                                <?php if (wp_http_validate_url($website)) : ?>
+                                    <a
+                                        href="<?php echo esc_url($website); ?>"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        <?php
+                                        echo esc_html__(
+                                            'Website',
+                                            'local-directory-framework'
+                                        );
+                                        ?>
+                                    </a>
+                                <?php endif; ?>
+
+                                <a
+                                    class="nwmd-business-row__details"
+                                    href="<?php echo esc_url(get_permalink()); ?>"
+                                >
+                                    <?php
+                                    echo esc_html__(
+                                        'Details',
+                                        'local-directory-framework'
+                                    );
+                                    ?>
+                                </a>
+                            </div>
+                        </article>
+                    <?php endwhile; ?>
+                </div>
+
+                <div class="nwmd-app-pagination">
+                    <?php
+                    the_posts_pagination(
+                        [
+                            'mid_size'  => 1,
+                            'prev_text' => esc_html__(
+                                'Previous',
+                                'local-directory-framework'
+                            ),
+                            'next_text' => esc_html__(
+                                'Next',
+                                'local-directory-framework'
+                            ),
+                            'add_args' => [
+                                'filter_category' =>
+                                    $category_term->slug,
+                                'filter_city' =>
+                                    $city_term->slug,
+                            ],
+                        ]
+                    );
+                    ?>
+                </div>
+
+            <?php else : ?>
+
+                <section class="nwmd-app-empty">
+                    <h2>
+                        <?php
+                        echo esc_html__(
+                            'No businesses listed yet.',
+                            'local-directory-framework'
+                        );
+                        ?>
+                    </h2>
+
+                    <p>
+                        <?php
+                        echo esc_html__(
+                            'A local business can request a new listing.',
+                            'local-directory-framework'
+                        );
+                        ?>
+                    </p>
+
+                    <a href="<?php echo esc_url($manage_url); ?>">
+                        <?php
+                        echo esc_html__(
+                            'Add a business',
+                            'local-directory-framework'
+                        );
+                        ?>
+                    </a>
+                </section>
+
+            <?php endif; ?>
+
+            <?php
+            nwmd_directory_render_ad(
+                'results_bottom',
+                $ad_context
+            );
+            ?>
+
+        <?php endif; ?>
+
+        <footer class="nwmd-app-footer">
             <p>
                 <?php
-                echo esc_html(
-                    !empty($active_filters)
-                        ? __('Try changing or clearing the selected filters.', 'local-directory-framework')
-                        : __('Published business profiles will appear here.', 'local-directory-framework')
+                echo esc_html__(
+                    'Own or manage a business?',
+                    'local-directory-framework'
                 );
                 ?>
             </p>
-        </div>
 
-    <?php endif; ?>
+            <a href="<?php echo esc_url($manage_url); ?>">
+                <?php
+                echo esc_html__(
+                    'Add, claim, update, or remove a listing',
+                    'local-directory-framework'
+                );
+                ?>
+            </a>
+        </footer>
+    </section>
 </main>
 
-<?php
-get_footer();
+<?php wp_footer(); ?>
+</body>
+</html>
