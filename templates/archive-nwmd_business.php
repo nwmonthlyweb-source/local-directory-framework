@@ -9,12 +9,17 @@ $current_category =
         'filter_category'
     );
 
+$current_specialty =
+    nwmd_directory_get_archive_filter_value(
+        'filter_specialty'
+    );
+
 $current_city =
     nwmd_directory_get_archive_filter_value(
         'filter_city'
     );
 
-$category_term = '';
+$category_term = null;
 
 if ('' !== $current_category) {
     $category_term = get_term_by(
@@ -27,11 +32,58 @@ if ('' !== $current_category) {
 if (!$category_term instanceof WP_Term) {
     $category_term = null;
     $current_category = '';
+    $current_specialty = '';
+    $current_city = '';
 }
 
-$city_term = '';
+$specialty_term = null;
+$specialty_selection_complete = false;
 
-if ('' !== $current_city) {
+if (
+    $category_term instanceof WP_Term &&
+    'all' === $current_specialty
+) {
+    $specialty_selection_complete = true;
+} elseif (
+    $category_term instanceof WP_Term &&
+    '' !== $current_specialty
+) {
+    $candidate_specialty = get_term_by(
+        'slug',
+        $current_specialty,
+        'nwmd_specialty'
+    );
+
+    if ($candidate_specialty instanceof WP_Term) {
+        $specialty_category_id = absint(
+            get_term_meta(
+                $candidate_specialty->term_id,
+                'nwmd_category_term_id',
+                true
+            )
+        );
+
+        if (
+            $specialty_category_id ===
+            absint($category_term->term_id)
+        ) {
+            $specialty_term = $candidate_specialty;
+            $specialty_selection_complete = true;
+        }
+    }
+}
+
+if (!$specialty_selection_complete) {
+    $current_specialty = '';
+    $current_city = '';
+}
+
+$city_term = null;
+
+if (
+    $specialty_selection_complete &&
+    '' !== $current_city
+) {
     $city_term = get_term_by(
         'slug',
         $current_city,
@@ -45,6 +97,14 @@ if (!$city_term instanceof WP_Term) {
 }
 
 $categories = nwmd_directory_get_launch_categories();
+$specialty_map = nwmd_directory_get_launch_specialties();
+$specialties = [];
+
+if ($category_term instanceof WP_Term) {
+    $specialties = $specialty_map[$category_term->slug]
+        ?? [];
+}
+
 $regions = nwmd_directory_get_launch_regions();
 
 $manage_url =
@@ -54,12 +114,20 @@ $back_url = home_url('/');
 
 if (
     $category_term instanceof WP_Term &&
-    $city_term instanceof WP_Term
+    $specialty_selection_complete
 ) {
-    $back_url =
-        nwmd_directory_get_app_category_url(
-            $category_term->slug
-        );
+    if ($city_term instanceof WP_Term) {
+        $back_url =
+            nwmd_directory_get_app_specialty_url(
+                $category_term->slug,
+                $current_specialty
+            );
+    } else {
+        $back_url =
+            nwmd_directory_get_app_category_url(
+                $category_term->slug
+            );
+    }
 }
 
 $state_abbreviation = '';
@@ -84,6 +152,11 @@ $ad_context = [
 if ($category_term instanceof WP_Term) {
     $ad_context['category_term_ids'][] =
         absint($category_term->term_id);
+}
+
+if ($specialty_term instanceof WP_Term) {
+    $ad_context['specialty_term_ids'][] =
+        absint($specialty_term->term_id);
 }
 
 if ($city_term instanceof WP_Term) {
@@ -192,11 +265,87 @@ if ($city_term instanceof WP_Term) {
                 <?php endforeach; ?>
             </nav>
 
-        <?php elseif (!$city_term instanceof WP_Term) : ?>
+        <?php elseif (!$specialty_selection_complete) : ?>
 
             <header class="nwmd-app-heading">
                 <p class="nwmd-app-heading__eyebrow">
                     <?php echo esc_html($category_term->name); ?>
+                </p>
+
+                <h1>
+                    <?php
+                    echo esc_html__(
+                        'Choose a service',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h1>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Choose one service or view every business in this category.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </header>
+
+            <nav class="nwmd-app-button-grid">
+                <a
+                    class="nwmd-app-button"
+                    href="<?php echo esc_url(
+                        nwmd_directory_get_app_specialty_url(
+                            $category_term->slug,
+                            'all'
+                        )
+                    ); ?>"
+                >
+                    <strong>
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s: category name. */
+                                __('All %s', 'local-directory-framework'),
+                                $category_term->name
+                            )
+                        );
+                        ?>
+                    </strong>
+
+                    <span aria-hidden="true">→</span>
+                </a>
+
+                <?php foreach ($specialties as $specialty) : ?>
+                    <a
+                        class="nwmd-app-button"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_app_specialty_url(
+                                $category_term->slug,
+                                $specialty['slug']
+                            )
+                        ); ?>"
+                    >
+                        <strong>
+                            <?php echo esc_html($specialty['name']); ?>
+                        </strong>
+
+                        <span aria-hidden="true">→</span>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+
+        <?php elseif (!$city_term instanceof WP_Term) : ?>
+
+            <header class="nwmd-app-heading">
+                <p class="nwmd-app-heading__eyebrow">
+                    <?php
+                    echo esc_html(
+                        $specialty_term instanceof WP_Term
+                            ? $specialty_term->name
+                            : $category_term->name
+                    );
+                    ?>
                 </p>
 
                 <h1>
@@ -238,6 +387,7 @@ if ($city_term instanceof WP_Term) {
                                     href="<?php echo esc_url(
                                         nwmd_directory_get_app_city_url(
                                             $category_term->slug,
+                                            $current_specialty,
                                             $city['slug']
                                         )
                                     ); ?>"

@@ -384,15 +384,45 @@ function nwmd_directory_get_app_category_url(
 }
 
 /**
- * Return the business archive URL for one category and city.
+ * Return the business archive URL for one category and specialty.
  *
- * @param string $category_slug Category slug.
- * @param string $city_slug     City slug.
+ * Use the special value "all" when visitors choose all services.
+ *
+ * @param string $category_slug  Category slug.
+ * @param string $specialty_slug Specialty slug or "all".
+ *
+ * @return string
+ */
+function nwmd_directory_get_app_specialty_url(
+    $category_slug,
+    $specialty_slug = 'all'
+) {
+
+    return add_query_arg(
+        [
+            'filter_category' => sanitize_title(
+                $category_slug
+            ),
+            'filter_specialty' => sanitize_title(
+                $specialty_slug
+            ),
+        ],
+        nwmd_directory_get_app_archive_url()
+    );
+}
+
+/**
+ * Return the business archive URL for one category, specialty, and city.
+ *
+ * @param string $category_slug  Category slug.
+ * @param string $specialty_slug Specialty slug or "all".
+ * @param string $city_slug      City slug.
  *
  * @return string
  */
 function nwmd_directory_get_app_city_url(
     $category_slug,
+    $specialty_slug,
     $city_slug
 ) {
 
@@ -400,6 +430,9 @@ function nwmd_directory_get_app_city_url(
         [
             'filter_category' => sanitize_title(
                 $category_slug
+            ),
+            'filter_specialty' => sanitize_title(
+                $specialty_slug
             ),
             'filter_city' => sanitize_title(
                 $city_slug
@@ -570,6 +603,13 @@ function nwmd_directory_filter_archive_query($query) {
         );
 
         if ('' === $slug) {
+            continue;
+        }
+
+        if (
+            'filter_specialty' === $filter_key &&
+            'all' === $slug
+        ) {
             continue;
         }
 
