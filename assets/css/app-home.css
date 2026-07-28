@@ -250,16 +250,42 @@ body.nwmd-app-body {
         transition: none;
     }
 }
-body.nwmd-splash-pending {
+.nwmd-app-first-page {
+    display: none;
+}
+
+html.nwmd-js:not(.nwmd-first-page-seen)
+body.nwmd-first-page-enabled {
     overflow: hidden;
     background: #0f172a;
 }
 
-.nwmd-app-splash {
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
+html.nwmd-js:not(.nwmd-first-page-seen)
+body.nwmd-first-page-enabled
+.nwmd-app-home {
+    display: none;
+}
+
+html.nwmd-js:not(.nwmd-first-page-seen)
+body.nwmd-first-page-enabled
+.nwmd-app-first-page {
     display: grid;
+}
+
+html.nwmd-first-page-seen
+body.nwmd-first-page-enabled
+.nwmd-app-first-page {
+    display: none;
+}
+
+html.nwmd-first-page-seen
+body.nwmd-first-page-enabled
+.nwmd-app-home {
+    display: block;
+}
+
+.nwmd-app-first-page {
+    position: relative;
     width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
@@ -270,105 +296,93 @@ body.nwmd-splash-pending {
         max(24px, env(safe-area-inset-bottom));
     box-sizing: border-box;
     background-color: #0f172a;
-    background-image:
-        linear-gradient(
-            rgba(9, 18, 36, 0.42),
-            rgba(9, 18, 36, 0.7)
-        ),
-        url("../images/nw-monthly-splash.jpg");
-    background-position: center center;
+    background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
+    color: #ffffff;
     opacity: 1;
-    visibility: visible;
-    transition:
-        opacity 0.22s ease,
-        visibility 0.22s ease;
+    text-align: center;
+    transition: opacity 0.22s ease;
 }
 
-.nwmd-app-splash.is-hiding {
+.nwmd-app-first-page.is-leaving {
     opacity: 0;
-    visibility: hidden;
 }
 
-.nwmd-app-splash__content {
+.nwmd-app-first-page__content {
     display: grid;
-    width: min(620px, 100%);
+    width: min(640px, 100%);
     justify-items: center;
     padding: 0;
     border: 0;
     background: transparent;
     box-shadow: none;
-    text-align: center;
 }
 
-.nwmd-app-splash__icon {
+.nwmd-app-first-page__icon {
     display: block;
-    width: 88px;
-    height: 88px;
+    width: 82px;
+    height: 82px;
     margin: 0 0 24px;
     border: 0;
-    border-radius: 22px;
+    border-radius: 21px;
     background: transparent;
     box-shadow: none;
     object-fit: cover;
 }
 
-.nwmd-app-splash__title {
+.nwmd-app-first-page__title {
     margin: 0;
     color: #ffffff;
-    font-size: clamp(2.6rem, 11vw, 5rem);
+    font-size: clamp(2.7rem, 11vw, 5rem);
     font-weight: 900;
     letter-spacing: -0.055em;
     line-height: 1;
-    text-shadow: 0 3px 24px rgba(0, 0, 0, 0.48);
+    text-shadow: 0 3px 24px rgba(0, 0, 0, 0.5);
 }
 
-.nwmd-app-splash__subtitle {
-    margin: 22px 0 0;
+.nwmd-app-first-page__subtitle {
+    margin: 20px 0 0;
     color: #ffffff;
     font-size: clamp(1.25rem, 5vw, 2rem);
     font-weight: 800;
     line-height: 1.2;
-    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.48);
+    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5);
 }
 
-.nwmd-app-splash__region {
-    margin: 22px 0 0;
+.nwmd-app-first-page__region {
+    margin: 20px 0 0;
     color: #ffffff;
     font-size: clamp(1rem, 4vw, 1.45rem);
     font-weight: 800;
     letter-spacing: 0.02em;
     line-height: 1.2;
-    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.48);
+    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5);
 }
 
 @media (max-width: 620px) {
-    .nwmd-app-splash {
+    .nwmd-app-first-page {
         padding:
             max(22px, env(safe-area-inset-top))
             20px
             max(22px, env(safe-area-inset-bottom));
     }
 
-    .nwmd-app-splash__icon {
+    .nwmd-app-first-page__icon {
         width: 76px;
         height: 76px;
         margin-bottom: 20px;
         border-radius: 19px;
     }
 
-    .nwmd-app-splash__subtitle {
-        margin-top: 18px;
-    }
-
-    .nwmd-app-splash__region {
+    .nwmd-app-first-page__subtitle,
+    .nwmd-app-first-page__region {
         margin-top: 18px;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .nwmd-app-splash {
+    .nwmd-app-first-page {
         transition: none;
     }
 }

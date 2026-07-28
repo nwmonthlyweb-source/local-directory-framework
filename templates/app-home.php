@@ -8,11 +8,43 @@ $categories = nwmd_directory_get_launch_categories();
 
 $manage_url = nwmd_directory_get_business_request_url();
 
-$splash_icon_url = NWMD_DIRECTORY_URL
-    . 'assets/icons/nw-monthly-192.png';
+$app_settings = nwmd_directory_get_app_settings();
 
-$splash_image_url = NWMD_DIRECTORY_URL
-    . 'assets/images/nw-monthly-splash.jpg';
+$first_page_enabled = !empty(
+    $app_settings['first_page_enabled']
+);
+
+$first_page_title =
+    $app_settings['first_page_title'];
+
+$first_page_subtitle =
+    $app_settings['first_page_subtitle'];
+
+$first_page_region =
+    $app_settings['first_page_region'];
+
+$first_page_duration_ms = max(
+    300,
+    (int) round(
+        (float) $app_settings['first_page_duration']
+        * 1000
+    )
+);
+
+$first_page_frequency =
+    $app_settings['first_page_frequency'];
+
+$splash_icon_url =
+    nwmd_directory_get_app_setting_image_url(
+        'first_page_icon_id',
+        'assets/icons/nw-monthly-192.png'
+    );
+
+$splash_image_url =
+    nwmd_directory_get_app_setting_image_url(
+        'first_page_background_id',
+        'assets/images/nw-monthly-splash.jpg'
+    );
 
 $icons = [
     'restaurants' => '
@@ -89,102 +121,201 @@ $allowed_svg = [
         name="viewport"
         content="width=device-width, initial-scale=1"
     >
-
-    <link
-        id="nwmd-splash-preload"
-        rel="preload"
-        href="<?php echo esc_url($splash_image_url); ?>"
-        as="image"
-        type="image/jpeg"
-        fetchpriority="high"
-    >
-
-    <?php wp_head(); ?>
-
-    <style id="nwmd-splash-critical">
-        body.nwmd-splash-pending {
-            overflow: hidden;
-        }
-
-        .nwmd-app-splash {
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-            display: flex;
-            width: 100%;
-            min-height: 100vh;
-            min-height: 100dvh;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            box-sizing: border-box;
-            background:
-                linear-gradient(
-                    rgba(9, 18, 36, 0.46),
-                    rgba(9, 18, 36, 0.68)
-                ),
-                url('<?php echo esc_url($splash_image_url); ?>')
-                center center / cover no-repeat;
-        }
-
-        .nwmd-app-splash__content {
-            width: min(420px, 100%);
-            text-align: center;
-        }
-    </style>
-</head>
-
-<body <?php body_class('nwmd-app-body nwmd-splash-pending'); ?>>
-<?php wp_body_open(); ?>
-
-<div
-    class="nwmd-app-splash"
-    data-nwmd-app-splash
-    role="status"
-    aria-label="<?php
-        echo esc_attr__(
-            'NW Monthly is loading',
-            'local-directory-framework'
-        );
-    ?>"
->
-    <div class="nwmd-app-splash__content">
-        <img
-            class="nwmd-app-splash__icon"
-            src="<?php echo esc_url($splash_icon_url); ?>"
-            width="192"
-            height="192"
-            alt=""
-            aria-hidden="true"
-            decoding="async"
+    <?php if ($first_page_enabled) : ?>
+        <link
+            id="nwmd-first-page-preload"
+            rel="preload"
+            href="<?php echo esc_url($splash_image_url); ?>"
+            as="image"
             fetchpriority="high"
         >
 
-        <p class="nwmd-app-splash__title">
-            NW Monthly
-        </p>
+        <script id="nwmd-first-page-bootstrap">
+            (function () {
+                'use strict';
 
-        <p class="nwmd-app-splash__subtitle">
-            <?php
-            echo esc_html__(
-                'Local Business Directory',
+                var root = document.documentElement;
+
+                root.classList.add('nwmd-js');
+
+                <?php if ('session' === $first_page_frequency) : ?>
+                try {
+                    if (
+                        window.sessionStorage.getItem(
+                            'nwmd_app_first_page_seen'
+                        ) === '1'
+                    ) {
+                        root.classList.add(
+                            'nwmd-first-page-seen'
+                        );
+                    }
+                } catch (error) {
+                    // Continue when browser storage is unavailable.
+                }
+                <?php endif; ?>
+            })();
+        </script>
+
+        <style id="nwmd-first-page-critical">
+            .nwmd-app-first-page {
+                display: none;
+            }
+
+            html.nwmd-js:not(.nwmd-first-page-seen)
+            body.nwmd-first-page-enabled {
+                overflow: hidden;
+                background: #0f172a;
+            }
+
+            html.nwmd-js:not(.nwmd-first-page-seen)
+            body.nwmd-first-page-enabled
+            .nwmd-app-home {
+                display: none;
+            }
+
+            html.nwmd-js:not(.nwmd-first-page-seen)
+            body.nwmd-first-page-enabled
+            .nwmd-app-first-page {
+                display: grid;
+                width: 100%;
+                min-height: 100vh;
+                min-height: 100dvh;
+                place-items: center;
+                padding: 24px;
+                box-sizing: border-box;
+                background-color: #0f172a;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: cover;
+                color: #ffffff;
+                text-align: center;
+            }
+
+            .nwmd-app-first-page__content {
+                display: grid;
+                justify-items: center;
+                width: min(640px, 100%);
+            }
+
+            .nwmd-app-first-page__icon {
+                display: block;
+                width: 82px;
+                height: 82px;
+                margin: 0 0 24px;
+                border-radius: 21px;
+                object-fit: cover;
+            }
+
+            .nwmd-app-first-page__title {
+                margin: 0;
+                color: #ffffff;
+                font-size: clamp(2.7rem, 11vw, 5rem);
+                font-weight: 900;
+                letter-spacing: -0.055em;
+                line-height: 1;
+            }
+
+            .nwmd-app-first-page__subtitle {
+                margin: 20px 0 0;
+                color: #ffffff;
+                font-size: clamp(1.25rem, 5vw, 2rem);
+                font-weight: 800;
+                line-height: 1.2;
+            }
+
+            .nwmd-app-first-page__region {
+                margin: 20px 0 0;
+                color: #ffffff;
+                font-size: clamp(1rem, 4vw, 1.45rem);
+                font-weight: 800;
+                line-height: 1.2;
+            }
+
+            html.nwmd-first-page-seen
+            body.nwmd-first-page-enabled
+            .nwmd-app-first-page {
+                display: none;
+            }
+        </style>
+    <?php endif; ?>
+
+    <?php wp_head(); ?>
+</head>
+
+<?php
+$body_classes = [
+    'nwmd-app-body',
+];
+
+if ($first_page_enabled) {
+    $body_classes[] = 'nwmd-first-page-enabled';
+}
+?>
+<body <?php body_class(implode(' ', $body_classes)); ?>>
+<?php wp_body_open(); ?>
+
+<?php if ($first_page_enabled) : ?>
+    <section
+        class="nwmd-app-first-page"
+        data-nwmd-first-page
+        data-duration="<?php
+            echo esc_attr(
+                (string) $first_page_duration_ms
+            );
+        ?>"
+        data-frequency="<?php
+            echo esc_attr($first_page_frequency);
+        ?>"
+        role="status"
+        aria-label="<?php
+            echo esc_attr__(
+                'NW Monthly introduction',
                 'local-directory-framework'
             );
-            ?>
-        </p>
+        ?>"
+        style="
+            background-image:
+                linear-gradient(
+                    rgba(9, 18, 36, 0.42),
+                    rgba(9, 18, 36, 0.72)
+                ),
+                url('<?php
+                    echo esc_url($splash_image_url);
+                ?>');
+        "
+    >
+        <div class="nwmd-app-first-page__content">
+            <img
+                class="nwmd-app-first-page__icon"
+                src="<?php echo esc_url($splash_icon_url); ?>"
+                width="192"
+                height="192"
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+                fetchpriority="high"
+            >
 
-        <p class="nwmd-app-splash__region">
-            <?php
-            echo esc_html__(
-                'Washington • Oregon',
-                'local-directory-framework'
-            );
-            ?>
-        </p>
-    </div>
-</div>
+            <p class="nwmd-app-first-page__title">
+                <?php echo esc_html($first_page_title); ?>
+            </p>
 
-<main class="nwmd-app-home" id="primary">
+            <p class="nwmd-app-first-page__subtitle">
+                <?php echo esc_html($first_page_subtitle); ?>
+            </p>
+
+            <p class="nwmd-app-first-page__region">
+                <?php echo esc_html($first_page_region); ?>
+            </p>
+        </div>
+    </section>
+<?php endif; ?>
+
+<main
+    class="nwmd-app-home"
+    id="primary"
+    data-nwmd-app-home
+>
     <section class="nwmd-app-home__panel">
         <header class="nwmd-app-home__header">
             <div class="nwmd-app-home__brand">
