@@ -137,7 +137,7 @@ body.nwmd-directory-app-body {
 }
 
 .nwmd-app-button span {
-    color: #9aa7ba;
+    color: #2563eb;
     font-size: 1.2rem;
 }
 
@@ -156,9 +156,9 @@ body.nwmd-directory-app-body {
 }
 
 .nwmd-city-button span {
-    color: #748197;
+    color: #2563eb;
     font-size: 0.82rem;
-    font-weight: 800;
+    font-weight: 900;
 }
 
 .nwmd-business-list {

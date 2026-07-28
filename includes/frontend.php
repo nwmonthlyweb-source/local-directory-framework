@@ -5,6 +5,220 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Return whether the current request uses the app interface.
+ *
+ * @return bool
+ */
+function nwmd_directory_is_app_surface() {
+
+    return (
+        is_front_page() ||
+        is_post_type_archive('nwmd_business') ||
+        is_singular('nwmd_business') ||
+        nwmd_directory_is_business_request_page()
+    );
+}
+
+/**
+ * Return a public URL for an app resource.
+ *
+ * @param string $resource Resource name.
+ *
+ * @return string
+ */
+function nwmd_directory_get_app_resource_url($resource) {
+
+    return add_query_arg(
+        'nwmd_app_resource',
+        sanitize_key($resource),
+        home_url('/')
+    );
+}
+
+/**
+ * Serve the web app manifest and service worker.
+ */
+function nwmd_directory_maybe_serve_app_resource() {
+
+    if (
+        !isset($_GET['nwmd_app_resource']) ||
+        !is_string($_GET['nwmd_app_resource'])
+    ) {
+        return;
+    }
+
+    $resource = sanitize_key(
+        wp_unslash($_GET['nwmd_app_resource'])
+    );
+
+    if (
+        'manifest' !== $resource &&
+        'service-worker' !== $resource
+    ) {
+        return;
+    }
+
+    $app_url = trailingslashit(home_url('/'));
+
+    $scope_path = wp_parse_url(
+        $app_url,
+        PHP_URL_PATH
+    );
+
+    if (
+        !is_string($scope_path) ||
+        '' === $scope_path
+    ) {
+        $scope_path = '/';
+    }
+
+    $scope_path = trailingslashit($scope_path);
+
+    status_header(200);
+    nocache_headers();
+
+    header('X-Content-Type-Options: nosniff');
+
+    if ('manifest' === $resource) {
+        $manifest = [
+            'id'               => $app_url,
+            'name'             => 'NW Monthly Directory',
+            'short_name'       => 'NW Monthly',
+            'description'      => 'Local business directory for Washington and Oregon.',
+            'lang'             => get_bloginfo('language'),
+            'start_url'        => $app_url,
+            'scope'            => $app_url,
+            'display'          => 'standalone',
+            'background_color' => '#f4f7fb',
+            'theme_color'      => '#2563eb',
+            'icons'            => [
+                [
+                    'src'     => NWMD_DIRECTORY_URL
+                        . 'assets/icons/nw-monthly-192.png',
+                    'sizes'   => '192x192',
+                    'type'    => 'image/png',
+                    'purpose' => 'any',
+                ],
+                [
+                    'src'     => NWMD_DIRECTORY_URL
+                        . 'assets/icons/nw-monthly-512.png',
+                    'sizes'   => '512x512',
+                    'type'    => 'image/png',
+                    'purpose' => 'any maskable',
+                ],
+            ],
+        ];
+
+        header(
+            'Content-Type: application/manifest+json; charset=utf-8'
+        );
+
+        echo wp_json_encode(
+            $manifest,
+            JSON_UNESCAPED_SLASHES |
+            JSON_UNESCAPED_UNICODE
+        );
+
+        exit;
+    }
+
+    header(
+        'Content-Type: application/javascript; charset=utf-8'
+    );
+
+    header(
+        'Service-Worker-Allowed: ' . $scope_path
+    );
+
+    $service_worker = <<<'JS'
+self.addEventListener('install', function () {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', function (event) {
+    event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', function (event) {
+    if ('GET' !== event.request.method) {
+        return;
+    }
+
+    event.respondWith(
+        fetch(event.request)
+    );
+});
+JS;
+
+    echo $service_worker;
+
+    exit;
+}
+
+add_action(
+    'template_redirect',
+    'nwmd_directory_maybe_serve_app_resource',
+    0
+);
+
+/**
+ * Print app metadata in plugin-owned page heads.
+ */
+function nwmd_directory_render_app_head_meta() {
+
+    if (!nwmd_directory_is_app_surface()) {
+        return;
+    }
+
+    $manifest_url =
+        nwmd_directory_get_app_resource_url('manifest');
+
+    $apple_icon_url =
+        NWMD_DIRECTORY_URL
+        . 'assets/icons/nw-monthly-180.png';
+    ?>
+
+    <link
+        rel="manifest"
+        href="<?php echo esc_url($manifest_url); ?>"
+    >
+
+    <link
+        rel="apple-touch-icon"
+        sizes="180x180"
+        href="<?php echo esc_url($apple_icon_url); ?>"
+    >
+
+    <meta
+        name="theme-color"
+        content="#2563eb"
+    >
+
+    <meta
+        name="apple-mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="default"
+    >
+
+    <meta
+        name="apple-mobile-web-app-title"
+        content="NW Monthly"
+    >
+
+    <?php
+}
+
+add_action(
+    'wp_head',
+    'nwmd_directory_render_app_head_meta',
+    1
+);
+
+/**
  * Load only the public styles needed for the current screen.
  */
 function nwmd_directory_enqueue_frontend_assets() {
@@ -55,6 +269,19 @@ function nwmd_directory_enqueue_frontend_assets() {
             [],
             NWMD_DIRECTORY_VERSION,
             true
+        );
+
+        wp_localize_script(
+            'nwmd-directory-app-common',
+            'nwmdDirectoryApp',
+            [
+                'serviceWorkerUrl' =>
+                    nwmd_directory_get_app_resource_url(
+                        'service-worker'
+                    ),
+                'serviceWorkerScope' =>
+                    trailingslashit(home_url('/')),
+            ]
         );
     }
     if ($is_app_home) {
@@ -410,6 +637,33 @@ function nwmd_directory_render_app_footer($show_manage = true) {
             </a>
         <?php endif; ?>
 
+        <div class="nwmd-site-footer__install-wrap">
+            <button
+                type="button"
+                class="nwmd-site-footer__install"
+                data-nwmd-install
+                hidden
+            >
+                <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3"
+                    />
+                </svg>
+
+                <span>
+                    <?php
+                    echo esc_html__(
+                        'Add Directory To Home Screen',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </span>
+            </button>
+        </div>
+
         <div class="nwmd-site-footer__meta">
             <p>
                 <?php
@@ -564,7 +818,49 @@ function nwmd_directory_render_app_footer($show_manage = true) {
                 <p>
                     <?php
                     echo esc_html__(
-                        'NW Monthly is a lightweight local business directory for Washington and Oregon. Visitors choose a category and city, browse local businesses, view business profiles, and contact businesses directly.',
+                        'NW Monthly is a local business directory app for Washington and Oregon. Choose a category and city to find local businesses, view profiles, and contact businesses directly.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </div>
+        </dialog>
+
+        <dialog
+            class="nwmd-info-dialog"
+            id="nwmd-install-help"
+            data-nwmd-dialog
+        >
+            <div class="nwmd-info-dialog__header">
+                <h2>
+                    <?php
+                    echo esc_html__(
+                        'Add NW Monthly',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h2>
+
+                <button
+                    type="button"
+                    class="nwmd-info-dialog__close"
+                    data-nwmd-dialog-close
+                    aria-label="<?php
+                        echo esc_attr__(
+                            'Close installation instructions',
+                            'local-directory-framework'
+                        );
+                    ?>"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <div class="nwmd-info-dialog__content">
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'On iPhone or iPad, open NW Monthly in Safari, tap the Share button, then tap Add to Home Screen.',
                         'local-directory-framework'
                     );
                     ?>
@@ -573,7 +869,7 @@ function nwmd_directory_render_app_footer($show_manage = true) {
                 <p>
                     <?php
                     echo esc_html__(
-                        'Business owners can request a new listing, claim a profile, submit updates or corrections, and request removal. Monthly Top 10 lists use organic rankings, while clearly labeled advertising remains separate.',
+                        'On Android, open your browser menu and choose Install app or Add to Home screen.',
                         'local-directory-framework'
                     );
                     ?>
