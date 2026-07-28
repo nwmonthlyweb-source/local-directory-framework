@@ -19,6 +19,7 @@ require_once NWMD_DIRECTORY_PATH . 'includes/content-types.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/default-data.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/database-schema.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/advertising.php';
+require_once NWMD_DIRECTORY_PATH . 'includes/advertising-inquiries.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-details.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-index.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-sources-admin.php';
