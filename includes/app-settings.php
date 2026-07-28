@@ -18,7 +18,6 @@ function nwmd_directory_get_app_settings_defaults() {
         'first_page_region'        => 'Washington • Oregon',
         'first_page_duration'      => 1.2,
         'first_page_frequency'     => 'session',
-        'first_page_background_id' => 0,
         'first_page_icon_id'       => 0,
     ];
 }
@@ -117,7 +116,6 @@ function nwmd_directory_sanitize_app_settings($input) {
         : $defaults['first_page_frequency'];
 
     $image_fields = [
-        'first_page_background_id',
         'first_page_icon_id',
     ];
 

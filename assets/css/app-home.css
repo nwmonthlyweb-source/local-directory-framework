@@ -257,7 +257,7 @@ body.nwmd-app-body {
 html.nwmd-js:not(.nwmd-first-page-seen)
 body.nwmd-first-page-enabled {
     overflow: hidden;
-    background: #0f172a;
+    background: #f4f7fb;
 }
 
 html.nwmd-js:not(.nwmd-first-page-seen)
@@ -295,14 +295,11 @@ body.nwmd-first-page-enabled
         24px
         max(24px, env(safe-area-inset-bottom));
     box-sizing: border-box;
-    background-color: #0f172a;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
-    color: #ffffff;
+    background: #f4f7fb;
+    color: #172033;
     opacity: 1;
     text-align: center;
-    transition: opacity 0.22s ease;
+    transition: opacity 0.18s ease;
 }
 
 .nwmd-app-first-page.is-leaving {
@@ -324,40 +321,38 @@ body.nwmd-first-page-enabled
     width: 82px;
     height: 82px;
     margin: 0 0 24px;
-    border: 0;
+    border: 1px solid #bfdbfe;
     border-radius: 21px;
-    background: transparent;
-    box-shadow: none;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(23, 32, 51, 0.08);
     object-fit: cover;
 }
 
 .nwmd-app-first-page__title {
     margin: 0;
-    color: #ffffff;
+    color: #172033;
     font-size: clamp(2.7rem, 11vw, 5rem);
     font-weight: 900;
     letter-spacing: -0.055em;
     line-height: 1;
-    text-shadow: 0 3px 24px rgba(0, 0, 0, 0.5);
 }
 
 .nwmd-app-first-page__subtitle {
     margin: 20px 0 0;
-    color: #ffffff;
+    color: #526078;
     font-size: clamp(1.25rem, 5vw, 2rem);
     font-weight: 800;
     line-height: 1.2;
-    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5);
 }
 
 .nwmd-app-first-page__region {
-    margin: 20px 0 0;
-    color: #ffffff;
-    font-size: clamp(1rem, 4vw, 1.45rem);
+    margin: 18px 0 0;
+    color: #2563eb;
+    font-size: clamp(0.85rem, 3.5vw, 1.05rem);
     font-weight: 800;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.1em;
     line-height: 1.2;
-    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.5);
+    text-transform: uppercase;
 }
 
 @media (max-width: 620px) {
@@ -375,9 +370,12 @@ body.nwmd-first-page-enabled
         border-radius: 19px;
     }
 
-    .nwmd-app-first-page__subtitle,
-    .nwmd-app-first-page__region {
+    .nwmd-app-first-page__subtitle {
         margin-top: 18px;
+    }
+
+    .nwmd-app-first-page__region {
+        margin-top: 16px;
     }
 }
 

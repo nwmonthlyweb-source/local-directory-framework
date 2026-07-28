@@ -184,9 +184,6 @@ function nwmd_directory_render_app_settings_admin_page() {
 
     $settings = nwmd_directory_get_app_settings();
 
-    $default_background_url = NWMD_DIRECTORY_URL
-        . 'assets/images/nw-monthly-splash.jpg';
-
     $default_icon_url = NWMD_DIRECTORY_URL
         . 'assets/icons/nw-monthly-192.png';
 
@@ -436,31 +433,7 @@ function nwmd_directory_render_app_settings_admin_page() {
                         </td>
                     </tr>
 
-                    <tr>
-                        <th scope="row">
-                            <?php
-                            echo esc_html__(
-                                'Background Image',
-                                'local-directory-framework'
-                            );
-                            ?>
-                        </th>
-                        <td>
-                            <?php
-                            nwmd_directory_render_app_image_setting(
-                                'first_page_background_id',
-                                $settings[
-                                    'first_page_background_id'
-                                ],
-                                $default_background_url,
-                                __(
-                                    'Choose a portrait or mobile-friendly image. Leaving this empty uses the image packaged with the plugin.',
-                                    'local-directory-framework'
-                                )
-                            );
-                            ?>
-                        </td>
-                    </tr>
+
 
                     <tr>
                         <th scope="row">

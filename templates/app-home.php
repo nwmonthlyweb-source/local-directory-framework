@@ -40,11 +40,6 @@ $splash_icon_url =
         'assets/icons/nw-monthly-192.png'
     );
 
-$splash_image_url =
-    nwmd_directory_get_app_setting_image_url(
-        'first_page_background_id',
-        'assets/images/nw-monthly-splash.jpg'
-    );
 
 $icons = [
     'restaurants' => '
@@ -122,13 +117,6 @@ $allowed_svg = [
         content="width=device-width, initial-scale=1"
     >
     <?php if ($first_page_enabled) : ?>
-        <link
-            id="nwmd-first-page-preload"
-            rel="preload"
-            href="<?php echo esc_url($splash_image_url); ?>"
-            as="image"
-            fetchpriority="high"
-        >
 
         <script id="nwmd-first-page-bootstrap">
             (function () {
@@ -164,7 +152,8 @@ $allowed_svg = [
             html.nwmd-js:not(.nwmd-first-page-seen)
             body.nwmd-first-page-enabled {
                 overflow: hidden;
-                background: #0f172a;
+                background: #f4f7fb;
+                color: #172033;
             }
 
             html.nwmd-js:not(.nwmd-first-page-seen)
@@ -183,11 +172,8 @@ $allowed_svg = [
                 place-items: center;
                 padding: 24px;
                 box-sizing: border-box;
-                background-color: #0f172a;
-                background-position: center;
-                background-repeat: no-repeat;
-                background-size: cover;
-                color: #ffffff;
+                background: #f4f7fb;
+                color: #172033;
                 text-align: center;
             }
 
@@ -202,13 +188,15 @@ $allowed_svg = [
                 width: 82px;
                 height: 82px;
                 margin: 0 0 24px;
+                border: 1px solid #bfdbfe;
                 border-radius: 21px;
+                background: #ffffff;
                 object-fit: cover;
             }
 
             .nwmd-app-first-page__title {
                 margin: 0;
-                color: #ffffff;
+                color: #172033;
                 font-size: clamp(2.7rem, 11vw, 5rem);
                 font-weight: 900;
                 letter-spacing: -0.055em;
@@ -217,18 +205,20 @@ $allowed_svg = [
 
             .nwmd-app-first-page__subtitle {
                 margin: 20px 0 0;
-                color: #ffffff;
+                color: #526078;
                 font-size: clamp(1.25rem, 5vw, 2rem);
                 font-weight: 800;
                 line-height: 1.2;
             }
 
             .nwmd-app-first-page__region {
-                margin: 20px 0 0;
-                color: #ffffff;
-                font-size: clamp(1rem, 4vw, 1.45rem);
+                margin: 18px 0 0;
+                color: #2563eb;
+                font-size: clamp(0.85rem, 3.5vw, 1.05rem);
                 font-weight: 800;
+                letter-spacing: 0.1em;
                 line-height: 1.2;
+                text-transform: uppercase;
             }
 
             html.nwmd-first-page-seen
@@ -273,16 +263,7 @@ if ($first_page_enabled) {
                 'local-directory-framework'
             );
         ?>"
-        style="
-            background-image:
-                linear-gradient(
-                    rgba(9, 18, 36, 0.42),
-                    rgba(9, 18, 36, 0.72)
-                ),
-                url('<?php
-                    echo esc_url($splash_image_url);
-                ?>');
-        "
+
     >
         <div class="nwmd-app-first-page__content">
             <img
