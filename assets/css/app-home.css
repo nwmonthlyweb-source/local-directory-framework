@@ -207,8 +207,9 @@ body.nwmd-app-body {
     }
 
     .nwmd-app-category {
-        grid-template-columns: 42px minmax(0, 1fr);
+        grid-template-columns: 42px minmax(0, 1fr) auto;
         min-height: 100px;
+        align-items: center;
         align-content: center;
         gap: 11px;
         padding: 14px;
@@ -223,7 +224,10 @@ body.nwmd-app-body {
 
     .nwmd-app-category__arrow {
         display: inline-block;
+        align-self: center;
+        justify-self: end;
         flex: 0 0 auto;
+        line-height: 1;
     }
 
     .nwmd-app-category strong {
