@@ -3,9 +3,6 @@
 if (!defined('ABSPATH')) {
     exit;
 }
-
-get_header();
-
 $business = nwmd_directory_get_public_business_request_business();
 
 $selected_request_type
@@ -27,6 +24,49 @@ $business_name = $business instanceof WP_Post
     )
     : '';
 ?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+    <meta charset="<?php bloginfo('charset'); ?>">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <?php wp_head(); ?>
+</head>
+
+<body <?php body_class('nwmd-app-body nwmd-request-app-body'); ?>>
+<?php wp_body_open(); ?>
+
+<header class="nwmd-request-bar">
+    <a
+        class="nwmd-request-bar__brand"
+        href="<?php echo esc_url(home_url('/')); ?>"
+    >
+        <span
+            class="nwmd-request-bar__mark"
+            aria-hidden="true"
+        >
+            NW
+        </span>
+
+        <span>NW Monthly</span>
+    </a>
+
+    <a
+        class="nwmd-request-bar__home"
+        href="<?php echo esc_url(home_url('/')); ?>"
+    >
+        <?php
+        echo esc_html__(
+            'Home',
+            'local-directory-framework'
+        );
+        ?>
+    </a>
+</header>
 
 <main
     class="nwmd-directory nwmd-directory--request"
@@ -34,7 +74,7 @@ $business_name = $business instanceof WP_Post
 >
     <section class="nwmd-directory__intro">
         <p class="nwmd-directory__eyebrow">
-            <?php echo esc_html__('Northwest Monthly Directory', 'local-directory-framework'); ?>
+            <?php echo esc_html__('NW Monthly', 'local-directory-framework'); ?>
         </p>
 
         <h1 class="nwmd-directory__title">
@@ -298,12 +338,17 @@ $business_name = $business instanceof WP_Post
                     class="nwmd-business-profile__back"
                     href="<?php echo esc_url($archive_url); ?>"
                 >
-                    <?php echo esc_html__('← Back to Businesses', 'local-directory-framework'); ?>
+                    <?php echo esc_html__('Back to Businesses', 'local-directory-framework'); ?>
                 </a>
             <?php endif; ?>
         </aside>
     </div>
 </main>
 
-<?php
-get_footer();
+<div class="nwmd-request-footer">
+    <?php nwmd_directory_render_app_footer(false); ?>
+</div>
+
+<?php wp_footer(); ?>
+</body>
+</html>

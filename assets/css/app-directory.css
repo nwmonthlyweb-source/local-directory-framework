@@ -402,3 +402,11 @@ body.nwmd-directory-app-body {
         scroll-behavior: auto !important;
     }
 }
+/* Larger state headings */
+.nwmd-city-group h2 {
+    margin-bottom: 16px;
+    color: #34435b;
+    font-size: clamp(1.4rem, 4vw, 1.7rem);
+    font-weight: 900;
+    letter-spacing: 0.025em;
+}

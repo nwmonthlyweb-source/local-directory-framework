@@ -17,9 +17,15 @@ function nwmd_directory_enqueue_frontend_assets() {
     $is_business_profile =
         is_singular('nwmd_business');
 
-    $is_other_directory_page =
-        nwmd_directory_is_business_request_page() ||
+    $is_business_request =
+        nwmd_directory_is_business_request_page();
+
+    $is_public_rankings =
         nwmd_directory_is_public_rankings_page();
+
+    $is_other_directory_page =
+        $is_business_request ||
+        $is_public_rankings;
 
     if (
         !$is_app_home &&
@@ -33,7 +39,8 @@ function nwmd_directory_enqueue_frontend_assets() {
     if (
         $is_app_home ||
         $is_business_archive ||
-        $is_business_profile
+        $is_business_profile ||
+        $is_business_request
     ) {
         wp_enqueue_style(
             'nwmd-directory-app-common',
@@ -91,6 +98,15 @@ function nwmd_directory_enqueue_frontend_assets() {
             'nwmd-directory-frontend',
             NWMD_DIRECTORY_URL . 'assets/css/frontend.css',
             [],
+            NWMD_DIRECTORY_VERSION
+        );
+    }
+
+    if ($is_business_request) {
+        wp_enqueue_style(
+            'nwmd-directory-app-request',
+            NWMD_DIRECTORY_URL . 'assets/css/app-request.css',
+            ['nwmd-directory-frontend'],
             NWMD_DIRECTORY_VERSION
         );
     }

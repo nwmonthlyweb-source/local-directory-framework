@@ -14,7 +14,7 @@ function nwmd_directory_get_business_request_mail_name() {
     $mail_name = apply_filters(
         'nwmd_directory_business_request_mail_name',
         __(
-            'Northwest Monthly',
+            'NW Monthly',
             'local-directory-framework'
         )
     );
@@ -246,7 +246,7 @@ function nwmd_directory_is_business_request_page() {
 }
 
 /**
- * Use the plugin request template unless the theme overrides it.
+ * Use the plugin-owned public request template.
  *
  * @param string $template Current template path.
  *
@@ -259,16 +259,7 @@ function nwmd_directory_business_request_template_include(
     if (!nwmd_directory_is_business_request_page()) {
         return $template;
     }
-
-    $theme_template = locate_template(
-        ['business-request.php']
-    );
-
-    if (!empty($theme_template)) {
-        return $theme_template;
-    }
-
-    $plugin_template = NWMD_DIRECTORY_PATH
+$plugin_template = NWMD_DIRECTORY_PATH
         . 'templates/business-request.php';
 
     return is_readable($plugin_template)
@@ -873,7 +864,7 @@ function nwmd_directory_send_business_request_decision_email(
     $message = sprintf(
         /* translators: 1: Requester name, 2: Request type, 3: Business name, 4: Status, 5: Request ID. */
         __(
-            "Hello %1\$s,\n\nNorthwest Monthly reviewed your %2\$s request for %3\$s.\n\nStatus: %4\$s\nRequest ID: %5\$d\n\nThis email confirms the administrator's decision. Administrator notes are kept private.",
+            "Hello %1\$s,\n\nNW Monthly reviewed your %2\$s request for %3\$s.\n\nStatus: %4\$s\nRequest ID: %5\$d\n\nThis email confirms the administrator's decision. Administrator notes are kept private.",
             'local-directory-framework'
         ),
         $requester,

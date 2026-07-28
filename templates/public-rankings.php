@@ -147,7 +147,7 @@ if ('results' === $step) {
 >
     <section class="nwmd-directory__intro">
         <p class="nwmd-directory__eyebrow">
-            <?php echo esc_html__('Northwest Monthly Rankings', 'local-directory-framework'); ?>
+            <?php echo esc_html__('NW Monthly Rankings', 'local-directory-framework'); ?>
         </p>
 
         <h1 class="nwmd-directory__title">

@@ -85,6 +85,38 @@ $allowed_svg = [
     >
 
     <?php wp_head(); ?>
+
+    <style id="nwmd-splash-critical">
+        body.nwmd-splash-pending {
+            overflow: hidden;
+        }
+
+        .nwmd-app-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background:
+                linear-gradient(
+                    rgba(9, 18, 36, 0.46),
+                    rgba(9, 18, 36, 0.68)
+                ),
+                url('https://nwmonthly.com/wp-content/uploads/2026/07/download.jpg')
+                center center / cover no-repeat;
+        }
+
+        .nwmd-app-splash__content {
+            width: min(420px, 100%);
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body <?php body_class('nwmd-app-body nwmd-splash-pending'); ?>>
