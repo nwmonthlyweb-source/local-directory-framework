@@ -150,7 +150,7 @@ $allowed_svg = [
             <h1>
                 <?php
                 echo esc_html__(
-                    'What are you looking for?',
+                    'Find a business',
                     'local-directory-framework'
                 );
                 ?>
@@ -159,7 +159,7 @@ $allowed_svg = [
             <p class="nwmd-app-home__intro">
                 <?php
                 echo esc_html__(
-                    'Choose a category, then choose your city.',
+                    'Choose a category first.',
                     'local-directory-framework'
                 );
                 ?>
@@ -218,25 +218,7 @@ $allowed_svg = [
             <?php endforeach; ?>
         </nav>
 
-        <footer class="nwmd-app-home__footer">
-            <p>
-                <?php
-                echo esc_html__(
-                    'Own or manage a business?',
-                    'local-directory-framework'
-                );
-                ?>
-            </p>
-
-            <a href="<?php echo esc_url($manage_url); ?>">
-                <?php
-                echo esc_html__(
-                    'Add, claim, update, or remove a listing',
-                    'local-directory-framework'
-                );
-                ?>
-            </a>
-        </footer>
+        <?php nwmd_directory_render_app_footer(); ?>
     </section>
 </main>
 

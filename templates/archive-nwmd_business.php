@@ -505,25 +505,7 @@ if ($city_term instanceof WP_Term) {
 
         <?php endif; ?>
 
-        <footer class="nwmd-app-footer">
-            <p>
-                <?php
-                echo esc_html__(
-                    'Own or manage a business?',
-                    'local-directory-framework'
-                );
-                ?>
-            </p>
-
-            <a href="<?php echo esc_url($manage_url); ?>">
-                <?php
-                echo esc_html__(
-                    'Add, claim, update, or remove a listing',
-                    'local-directory-framework'
-                );
-                ?>
-            </a>
-        </footer>
+        <?php nwmd_directory_render_app_footer(); ?>
     </section>
 </main>
 

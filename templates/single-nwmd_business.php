@@ -182,14 +182,6 @@ while (have_posts()) :
         $address_parts
     );
 
-    $directions_url = '';
-
-    if ('' !== $address_label) {
-        $directions_url =
-            'https://www.google.com/maps/search/?api=1&query='
-            . rawurlencode($address_label);
-    }
-
     $business_ad_context =
         nwmd_directory_get_business_ad_context(
             $post_id
@@ -301,8 +293,7 @@ while (have_posts()) :
         if (
             '' !== $phone_href ||
             wp_http_validate_url($website_url) ||
-            '' !== $public_email ||
-            '' !== $directions_url
+            '' !== $public_email
         ) :
             ?>
             <nav
@@ -345,21 +336,6 @@ while (have_posts()) :
                         <?php
                         echo esc_html__(
                             'Email',
-                            'local-directory-framework'
-                        );
-                        ?>
-                    </a>
-                <?php endif; ?>
-
-                <?php if ('' !== $directions_url) : ?>
-                    <a
-                        href="<?php echo esc_url($directions_url); ?>"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        <?php
-                        echo esc_html__(
-                            'Directions',
                             'local-directory-framework'
                         );
                         ?>
@@ -542,8 +518,9 @@ while (have_posts()) :
             'business_profile_bottom',
             $business_ad_context
         );
-        ?>
-    </article>
+        ?>    </article>
+
+    <?php nwmd_directory_render_app_footer(false); ?>
 </main>
 
 <?php wp_footer(); ?>

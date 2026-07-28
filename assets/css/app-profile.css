@@ -330,3 +330,8 @@ body.nwmd-profile-app-body {
     background: #eff6ff;
     color: #1d4ed8;
 }
+/* Light blue business management card */
+.nwmd-profile-manage {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}

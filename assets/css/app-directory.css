@@ -147,11 +147,12 @@ body.nwmd-directory-app-body {
 }
 
 .nwmd-city-group h2 {
-    margin: 0 0 12px;
-    color: #526078;
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    margin: 0 0 14px;
+    color: #2563eb;
+    font-size: 1.2rem;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    text-transform: none;
 }
 
 .nwmd-city-button span {

@@ -30,6 +30,26 @@ function nwmd_directory_enqueue_frontend_assets() {
         return;
     }
 
+    if (
+        $is_app_home ||
+        $is_business_archive ||
+        $is_business_profile
+    ) {
+        wp_enqueue_style(
+            'nwmd-directory-app-common',
+            NWMD_DIRECTORY_URL . 'assets/css/app-common.css',
+            [],
+            NWMD_DIRECTORY_VERSION
+        );
+
+        wp_enqueue_script(
+            'nwmd-directory-app-common',
+            NWMD_DIRECTORY_URL . 'assets/js/app-common.js',
+            [],
+            NWMD_DIRECTORY_VERSION,
+            true
+        );
+    }
     if ($is_app_home) {
         wp_enqueue_style(
             'nwmd-directory-app-home',
@@ -346,3 +366,205 @@ add_action(
     'nwmd_directory_filter_archive_query',
     20
 );
+/**
+ * Render the shared NW Monthly app footer.
+ *
+ * @param bool $show_manage Whether to show the Manage a Business link.
+ */
+function nwmd_directory_render_app_footer($show_manage = true) {
+
+    $year = wp_date('Y');
+
+    $manage_url =
+        nwmd_directory_get_business_request_url();
+    ?>
+
+    <footer class="nwmd-site-footer">
+        <?php if ($show_manage) : ?>
+            <a
+                class="nwmd-site-footer__manage"
+                href="<?php echo esc_url($manage_url); ?>"
+            >
+                <?php
+                echo esc_html__(
+                    'Manage a Business',
+                    'local-directory-framework'
+                );
+                ?>
+            </a>
+        <?php endif; ?>
+
+        <div class="nwmd-site-footer__meta">
+            <p>
+                <?php
+                echo esc_html(
+                    sprintf(
+                        /* translators: %s is the current year. */
+                        __(
+                            'Copyright © %s NW Monthly',
+                            'local-directory-framework'
+                        ),
+                        $year
+                    )
+                );
+                ?>
+            </p>
+
+            <nav
+                class="nwmd-site-footer__links"
+                aria-label="<?php
+                    echo esc_attr__(
+                        'Site information',
+                        'local-directory-framework'
+                    );
+                ?>"
+            >
+                <button
+                    type="button"
+                    data-nwmd-dialog-open="nwmd-privacy-terms"
+                >
+                    <?php
+                    echo esc_html__(
+                        'Privacy & Terms',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </button>
+
+                <button
+                    type="button"
+                    data-nwmd-dialog-open="nwmd-about"
+                >
+                    <?php
+                    echo esc_html__(
+                        'About',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </button>
+            </nav>
+        </div>
+
+        <dialog
+            class="nwmd-info-dialog"
+            id="nwmd-privacy-terms"
+            data-nwmd-dialog
+        >
+            <div class="nwmd-info-dialog__header">
+                <h2>
+                    <?php
+                    echo esc_html__(
+                        'Privacy & Terms',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h2>
+
+                <button
+                    type="button"
+                    class="nwmd-info-dialog__close"
+                    data-nwmd-dialog-close
+                    aria-label="<?php
+                        echo esc_attr__(
+                            'Close Privacy and Terms',
+                            'local-directory-framework'
+                        );
+                    ?>"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <div class="nwmd-info-dialog__content">
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'NW Monthly publishes local business information for Washington and Oregon. Information submitted through listing and contact forms is used to review requests, manage listings, respond to users, prevent abuse, and operate the service.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Public business details may appear on NW Monthly. Do not submit confidential information. Business information can change, so visitors should verify important details directly with the business.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Advertising does not influence organic rankings. Sponsored placements are clearly labeled. Listings are provided for general information and are not a guarantee or endorsement.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'By using NW Monthly, you agree to use the service lawfully and not misuse its listing, contact, advertising, or request features.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </div>
+        </dialog>
+
+        <dialog
+            class="nwmd-info-dialog"
+            id="nwmd-about"
+            data-nwmd-dialog
+        >
+            <div class="nwmd-info-dialog__header">
+                <h2>
+                    <?php
+                    echo esc_html__(
+                        'About NW Monthly',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h2>
+
+                <button
+                    type="button"
+                    class="nwmd-info-dialog__close"
+                    data-nwmd-dialog-close
+                    aria-label="<?php
+                        echo esc_attr__(
+                            'Close About',
+                            'local-directory-framework'
+                        );
+                    ?>"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <div class="nwmd-info-dialog__content">
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'NW Monthly is a lightweight local business directory for Washington and Oregon. Visitors choose a category and city, browse local businesses, view business profiles, and contact businesses directly.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Business owners can request a new listing, claim a profile, submit updates or corrections, and request removal. Monthly Top 10 lists use organic rankings, while clearly labeled advertising remains separate.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </div>
+        </dialog>
+    </footer>
+
+    <?php
+}
