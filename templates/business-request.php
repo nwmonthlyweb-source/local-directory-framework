@@ -18,6 +18,10 @@ $archive_url = get_post_type_archive_link(
     'nwmd_business'
 );
 
+$back_url = !empty($archive_url)
+    ? $archive_url
+    : home_url('/');
+
 $business_name = $business instanceof WP_Post
     ? sanitize_text_field(
         get_the_title($business->ID)
@@ -42,6 +46,20 @@ $business_name = $business instanceof WP_Post
 
 <header class="nwmd-request-bar">
     <a
+        class="nwmd-request-bar__back"
+        href="<?php echo esc_url($back_url); ?>"
+    >
+        <span aria-hidden="true">←</span>
+
+        <?php
+        echo esc_html__(
+            'Back',
+            'local-directory-framework'
+        );
+        ?>
+    </a>
+
+    <a
         class="nwmd-request-bar__brand"
         href="<?php echo esc_url(home_url('/')); ?>"
     >
@@ -53,18 +71,6 @@ $business_name = $business instanceof WP_Post
         </span>
 
         <span>NW Monthly</span>
-    </a>
-
-    <a
-        class="nwmd-request-bar__home"
-        href="<?php echo esc_url(home_url('/')); ?>"
-    >
-        <?php
-        echo esc_html__(
-            'Home',
-            'local-directory-framework'
-        );
-        ?>
     </a>
 </header>
 

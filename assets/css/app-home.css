@@ -222,7 +222,8 @@ body.nwmd-app-body {
     }
 
     .nwmd-app-category__arrow {
-        display: none;
+        display: inline-block;
+        flex: 0 0 auto;
     }
 
     .nwmd-app-category strong {

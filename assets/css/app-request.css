@@ -56,18 +56,26 @@ body.nwmd-request-app-body {
     font-size: 0.8rem;
 }
 
-.nwmd-request-bar__home {
+.nwmd-request-bar__back {
     display: inline-flex;
     min-height: 42px;
     align-items: center;
-    justify-content: center;
-    padding: 8px 17px;
-    border: 1px solid #bfdbfe;
-    border-radius: 999px;
-    background: #ffffff;
+    gap: 7px;
     color: #2563eb;
+    font-size: 0.9rem;
     font-weight: 800;
     text-decoration: none;
+}
+
+.nwmd-request-bar__back:hover,
+.nwmd-request-bar__back:focus-visible {
+    color: #1d4ed8;
+    text-decoration: none;
+}
+
+.nwmd-request-bar__back span {
+    font-size: 1.15rem;
+    line-height: 1;
 }
 
 .nwmd-directory--request {
@@ -171,5 +179,33 @@ body.nwmd-request-app-body {
     .nwmd-request-form,
     .nwmd-request-sidebar {
         padding: 20px;
+    }
+}
+/* Match shared app headers */
+.nwmd-request-bar__brand {
+    margin-left: auto;
+    font-size: 0.9rem;
+}
+
+.nwmd-request-bar__mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+}
+
+@media (max-width: 390px) {
+    .nwmd-request-bar {
+        gap: 12px;
+    }
+
+    .nwmd-request-bar__brand {
+        gap: 8px;
+        font-size: 0.86rem;
+    }
+
+    .nwmd-request-bar__mark {
+        width: 38px;
+        height: 38px;
     }
 }
