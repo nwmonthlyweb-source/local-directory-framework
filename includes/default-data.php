@@ -92,6 +92,266 @@ function nwmd_directory_get_launch_categories() {
 }
 
 /**
+ * Return the ordered launch specialties grouped by category.
+ *
+ * The public app uses this map for its service-selection screen.
+ *
+ * @return array
+ */
+function nwmd_directory_get_launch_specialties() {
+
+    return [
+        'restaurants' => [
+            [
+                'name' => 'American Restaurants',
+                'slug' => 'american-restaurants',
+            ],
+            [
+                'name' => 'Italian Restaurants',
+                'slug' => 'italian-restaurants',
+            ],
+            [
+                'name' => 'Mexican Restaurants',
+                'slug' => 'mexican-restaurants',
+            ],
+            [
+                'name' => 'Asian Restaurants',
+                'slug' => 'asian-restaurants',
+            ],
+            [
+                'name' => 'Coffee Shops & Cafes',
+                'slug' => 'coffee-shops-cafes',
+            ],
+            [
+                'name' => 'Bakeries',
+                'slug' => 'bakeries',
+            ],
+            [
+                'name' => 'Family Dining',
+                'slug' => 'family-dining',
+            ],
+            [
+                'name' => 'Bars & Pubs',
+                'slug' => 'bars-pubs',
+            ],
+        ],
+        'contractors' => [
+            [
+                'name' => 'General Contractors',
+                'slug' => 'general-contractors',
+            ],
+            [
+                'name' => 'Plumbers',
+                'slug' => 'plumbers',
+            ],
+            [
+                'name' => 'Roofers',
+                'slug' => 'roofers',
+            ],
+            [
+                'name' => 'Electricians',
+                'slug' => 'electricians',
+            ],
+            [
+                'name' => 'HVAC Contractors',
+                'slug' => 'hvac-contractors',
+            ],
+            [
+                'name' => 'Remodeling Contractors',
+                'slug' => 'remodeling-contractors',
+            ],
+            [
+                'name' => 'Painters',
+                'slug' => 'painters',
+            ],
+            [
+                'name' => 'Flooring Contractors',
+                'slug' => 'flooring-contractors',
+            ],
+            [
+                'name' => 'Concrete Contractors',
+                'slug' => 'concrete-contractors',
+            ],
+            [
+                'name' => 'Landscapers',
+                'slug' => 'landscapers',
+            ],
+        ],
+        'dentists' => [
+            [
+                'name' => 'General Dentistry',
+                'slug' => 'general-dentistry',
+            ],
+            [
+                'name' => 'Cosmetic Dentistry',
+                'slug' => 'cosmetic-dentistry',
+            ],
+            [
+                'name' => 'Pediatric Dentistry',
+                'slug' => 'pediatric-dentistry',
+            ],
+            [
+                'name' => 'Orthodontics',
+                'slug' => 'orthodontics',
+            ],
+            [
+                'name' => 'Oral Surgery',
+                'slug' => 'oral-surgery',
+            ],
+            [
+                'name' => 'Emergency Dentistry',
+                'slug' => 'emergency-dentistry',
+            ],
+        ],
+        'auto-services' => [
+            [
+                'name' => 'Auto Repair',
+                'slug' => 'auto-repair',
+            ],
+            [
+                'name' => 'Oil Change Services',
+                'slug' => 'oil-change-services',
+            ],
+            [
+                'name' => 'Tire Shops',
+                'slug' => 'tire-shops',
+            ],
+            [
+                'name' => 'Auto Body Shops',
+                'slug' => 'auto-body-shops',
+            ],
+            [
+                'name' => 'Towing Services',
+                'slug' => 'towing-services',
+            ],
+            [
+                'name' => 'Car Detailing',
+                'slug' => 'car-detailing',
+            ],
+            [
+                'name' => 'Transmission Repair',
+                'slug' => 'transmission-repair',
+            ],
+        ],
+        'health-wellness' => [
+            [
+                'name' => 'Primary Care',
+                'slug' => 'primary-care',
+            ],
+            [
+                'name' => 'Chiropractors',
+                'slug' => 'chiropractors',
+            ],
+            [
+                'name' => 'Physical Therapy',
+                'slug' => 'physical-therapy',
+            ],
+            [
+                'name' => 'Mental Health Services',
+                'slug' => 'mental-health-services',
+            ],
+            [
+                'name' => 'Massage Therapy',
+                'slug' => 'massage-therapy',
+            ],
+            [
+                'name' => 'Fitness & Gyms',
+                'slug' => 'fitness-gyms',
+            ],
+            [
+                'name' => 'Nutrition Services',
+                'slug' => 'nutrition-services',
+            ],
+        ],
+        'realtors' => [
+            [
+                'name' => 'Buyer Agents',
+                'slug' => 'buyer-agents',
+            ],
+            [
+                'name' => 'Seller Agents',
+                'slug' => 'seller-agents',
+            ],
+            [
+                'name' => 'Investment Property Firms',
+                'slug' => 'investment-property-firms',
+            ],
+            [
+                'name' => 'Property Management',
+                'slug' => 'property-management',
+            ],
+            [
+                'name' => 'Mortgage Lenders',
+                'slug' => 'mortgage-lenders',
+            ],
+            [
+                'name' => 'Title & Escrow Companies',
+                'slug' => 'title-escrow-companies',
+            ],
+            [
+                'name' => 'Home Inspectors',
+                'slug' => 'home-inspectors',
+            ],
+            [
+                'name' => 'Real Estate Appraisers',
+                'slug' => 'real-estate-appraisers',
+            ],
+        ],
+        'beauty-personal-care' => [
+            [
+                'name' => 'Hair Salons',
+                'slug' => 'hair-salons',
+            ],
+            [
+                'name' => 'Barbers',
+                'slug' => 'barbers',
+            ],
+            [
+                'name' => 'Nail Salons',
+                'slug' => 'nail-salons',
+            ],
+            [
+                'name' => 'Skin Care',
+                'slug' => 'skin-care',
+            ],
+            [
+                'name' => 'Spas',
+                'slug' => 'spas',
+            ],
+            [
+                'name' => 'Makeup Artists',
+                'slug' => 'makeup-artists',
+            ],
+        ],
+        'pet-services' => [
+            [
+                'name' => 'Veterinarians',
+                'slug' => 'veterinarians',
+            ],
+            [
+                'name' => 'Pet Grooming',
+                'slug' => 'pet-grooming',
+            ],
+            [
+                'name' => 'Dog Walking',
+                'slug' => 'dog-walking',
+            ],
+            [
+                'name' => 'Pet Boarding',
+                'slug' => 'pet-boarding',
+            ],
+            [
+                'name' => 'Pet Training',
+                'slug' => 'pet-training',
+            ],
+            [
+                'name' => 'Pet Sitting',
+                'slug' => 'pet-sitting',
+            ],
+        ],
+    ];
+}
+/**
  * Return the ordered NW Monthly launch regions.
  *
  * @return array
@@ -196,6 +456,40 @@ function nwmd_directory_install_default_terms() {
             $category['slug'],
             'nwmd_category'
         );
+    }
+
+    foreach (
+        nwmd_directory_get_launch_specialties()
+        as $category_slug => $specialties
+    ) {
+        $category_term = get_term_by(
+            'slug',
+            $category_slug,
+            'nwmd_category'
+        );
+
+        if (!$category_term instanceof WP_Term) {
+            continue;
+        }
+
+        foreach ($specialties as $specialty) {
+            $specialty_term_id =
+                nwmd_directory_get_or_create_term(
+                    $specialty['name'],
+                    $specialty['slug'],
+                    'nwmd_specialty'
+                );
+
+            if ($specialty_term_id < 1) {
+                continue;
+            }
+
+            update_term_meta(
+                $specialty_term_id,
+                'nwmd_category_term_id',
+                absint($category_term->term_id)
+            );
+        }
     }
 
     foreach (
