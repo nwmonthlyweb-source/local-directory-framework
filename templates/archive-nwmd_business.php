@@ -14,10 +14,19 @@ $current_specialty =
         'filter_specialty'
     );
 
+$current_state =
+    nwmd_directory_get_archive_filter_value(
+        'filter_state'
+    );
+
 $current_city =
     nwmd_directory_get_archive_filter_value(
         'filter_city'
     );
+
+$categories = nwmd_directory_get_launch_categories();
+$specialty_map = nwmd_directory_get_launch_specialties();
+$regions = nwmd_directory_get_launch_regions();
 
 $category_term = null;
 
@@ -33,7 +42,15 @@ if (!$category_term instanceof WP_Term) {
     $category_term = null;
     $current_category = '';
     $current_specialty = '';
+    $current_state = '';
     $current_city = '';
+}
+
+$specialties = [];
+
+if ($category_term instanceof WP_Term) {
+    $specialties = $specialty_map[$category_term->slug]
+        ?? [];
 }
 
 $specialty_term = null;
@@ -75,37 +92,79 @@ if (
 
 if (!$specialty_selection_complete) {
     $current_specialty = '';
+    $current_state = '';
+    $current_city = '';
+}
+
+$selected_region = null;
+
+if (
+    $specialty_selection_complete &&
+    '' !== $current_state
+) {
+    foreach ($regions as $region) {
+        if ($region['slug'] === $current_state) {
+            $selected_region = $region;
+            break;
+        }
+    }
+}
+
+$state_term = null;
+
+if (is_array($selected_region)) {
+    $candidate_state = get_term_by(
+        'slug',
+        $current_state,
+        'nwmd_state'
+    );
+
+    if ($candidate_state instanceof WP_Term) {
+        $state_term = $candidate_state;
+    }
+}
+
+if (!$state_term instanceof WP_Term) {
+    $state_term = null;
+    $selected_region = null;
+    $current_state = '';
     $current_city = '';
 }
 
 $city_term = null;
 
 if (
-    $specialty_selection_complete &&
+    $state_term instanceof WP_Term &&
     '' !== $current_city
 ) {
-    $city_term = get_term_by(
+    $candidate_city = get_term_by(
         'slug',
         $current_city,
         'nwmd_city'
     );
+
+    if ($candidate_city instanceof WP_Term) {
+        $city_state_term_id = absint(
+            get_term_meta(
+                $candidate_city->term_id,
+                'nwmd_state_term_id',
+                true
+            )
+        );
+
+        if (
+            $city_state_term_id ===
+            absint($state_term->term_id)
+        ) {
+            $city_term = $candidate_city;
+        }
+    }
 }
 
 if (!$city_term instanceof WP_Term) {
     $city_term = null;
     $current_city = '';
 }
-
-$categories = nwmd_directory_get_launch_categories();
-$specialty_map = nwmd_directory_get_launch_specialties();
-$specialties = [];
-
-if ($category_term instanceof WP_Term) {
-    $specialties = $specialty_map[$category_term->slug]
-        ?? [];
-}
-
-$regions = nwmd_directory_get_launch_regions();
 
 $manage_url =
     nwmd_directory_get_business_request_url();
@@ -116,7 +175,17 @@ if (
     $category_term instanceof WP_Term &&
     $specialty_selection_complete
 ) {
-    if ($city_term instanceof WP_Term) {
+    if (
+        $state_term instanceof WP_Term &&
+        $city_term instanceof WP_Term
+    ) {
+        $back_url =
+            nwmd_directory_get_app_state_url(
+                $category_term->slug,
+                $current_specialty,
+                $state_term->slug
+            );
+    } elseif ($state_term instanceof WP_Term) {
         $back_url =
             nwmd_directory_get_app_specialty_url(
                 $category_term->slug,
@@ -132,14 +201,22 @@ if (
 
 $state_abbreviation = '';
 
-if ($city_term instanceof WP_Term) {
+if ($state_term instanceof WP_Term) {
     $state_abbreviation = sanitize_text_field(
         get_term_meta(
-            $city_term->term_id,
-            'nwmd_state_abbreviation',
+            $state_term->term_id,
+            'nwmd_abbreviation',
             true
         )
     );
+
+    if (
+        '' === $state_abbreviation &&
+        is_array($selected_region)
+    ) {
+        $state_abbreviation =
+            $selected_region['abbreviation'];
+    }
 }
 
 $ad_context = [
@@ -159,22 +236,14 @@ if ($specialty_term instanceof WP_Term) {
         absint($specialty_term->term_id);
 }
 
+if ($state_term instanceof WP_Term) {
+    $ad_context['state_term_ids'][] =
+        absint($state_term->term_id);
+}
+
 if ($city_term instanceof WP_Term) {
     $ad_context['city_term_ids'][] =
         absint($city_term->term_id);
-
-    $state_term_id = absint(
-        get_term_meta(
-            $city_term->term_id,
-            'nwmd_state_term_id',
-            true
-        )
-    );
-
-    if ($state_term_id > 0) {
-        $ad_context['state_term_ids'][] =
-            $state_term_id;
-    }
 }
 ?>
 <!doctype html>
@@ -335,7 +404,7 @@ if ($city_term instanceof WP_Term) {
                 <?php endforeach; ?>
             </nav>
 
-        <?php elseif (!$city_term instanceof WP_Term) : ?>
+        <?php elseif (!$state_term instanceof WP_Term) : ?>
 
             <header class="nwmd-app-heading">
                 <p class="nwmd-app-heading__eyebrow">
@@ -344,6 +413,64 @@ if ($city_term instanceof WP_Term) {
                         $specialty_term instanceof WP_Term
                             ? $specialty_term->name
                             : $category_term->name
+                    );
+                    ?>
+                </p>
+
+                <h1>
+                    <?php
+                    echo esc_html__(
+                        'Choose your state',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h1>
+
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Choose Washington or Oregon.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </header>
+
+            <nav class="nwmd-app-button-grid">
+                <?php foreach ($regions as $region) : ?>
+                    <a
+                        class="nwmd-app-button"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_app_state_url(
+                                $category_term->slug,
+                                $current_specialty,
+                                $region['slug']
+                            )
+                        ); ?>"
+                    >
+                        <strong>
+                            <?php echo esc_html($region['name']); ?>
+                        </strong>
+
+                        <span>
+                            <?php echo esc_html($region['abbreviation']); ?>
+                        </span>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+
+        <?php elseif (!$city_term instanceof WP_Term) : ?>
+
+            <header class="nwmd-app-heading">
+                <p class="nwmd-app-heading__eyebrow">
+                    <?php
+                    echo esc_html(
+                        $state_term->name
+                        . (
+                            '' !== $state_abbreviation
+                                ? ' · ' . $state_abbreviation
+                                : ''
+                        )
                     );
                     ?>
                 </p>
@@ -360,53 +487,34 @@ if ($city_term instanceof WP_Term) {
                 <p>
                     <?php
                     echo esc_html__(
-                        'Tap one city to see local businesses.',
+                        'Choose one city to see local businesses.',
                         'local-directory-framework'
                     );
                     ?>
                 </p>
             </header>
 
-            <div class="nwmd-city-groups">
-                <?php foreach ($regions as $region) : ?>
-                    <section class="nwmd-city-group">
-                        <h2>
-                            <?php
-                            echo esc_html(
-                                $region['name']
-                                . ' · '
-                                . $region['abbreviation']
-                            );
-                            ?>
-                        </h2>
+            <div class="nwmd-city-grid">
+                <?php foreach ($selected_region['cities'] as $city) : ?>
+                    <a
+                        class="nwmd-city-button"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_app_city_url(
+                                $category_term->slug,
+                                $current_specialty,
+                                $state_term->slug,
+                                $city['slug']
+                            )
+                        ); ?>"
+                    >
+                        <strong>
+                            <?php echo esc_html($city['name']); ?>
+                        </strong>
 
-                        <div class="nwmd-city-grid">
-                            <?php foreach ($region['cities'] as $city) : ?>
-                                <a
-                                    class="nwmd-city-button"
-                                    href="<?php echo esc_url(
-                                        nwmd_directory_get_app_city_url(
-                                            $category_term->slug,
-                                            $current_specialty,
-                                            $city['slug']
-                                        )
-                                    ); ?>"
-                                >
-                                    <strong>
-                                        <?php echo esc_html($city['name']); ?>
-                                    </strong>
-
-                                    <span>
-                                        <?php
-                                        echo esc_html(
-                                            $region['abbreviation']
-                                        );
-                                        ?>
-                                    </span>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    </section>
+                        <span>
+                            <?php echo esc_html($state_abbreviation); ?>
+                        </span>
+                    </a>
                 <?php endforeach; ?>
             </div>
 

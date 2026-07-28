@@ -412,10 +412,42 @@ function nwmd_directory_get_app_specialty_url(
 }
 
 /**
- * Return the business archive URL for one category, specialty, and city.
+ * Return the business archive URL for one category, specialty, and state.
  *
  * @param string $category_slug  Category slug.
  * @param string $specialty_slug Specialty slug or "all".
+ * @param string $state_slug     State slug.
+ *
+ * @return string
+ */
+function nwmd_directory_get_app_state_url(
+    $category_slug,
+    $specialty_slug,
+    $state_slug
+) {
+
+    return add_query_arg(
+        [
+            'filter_category' => sanitize_title(
+                $category_slug
+            ),
+            'filter_specialty' => sanitize_title(
+                $specialty_slug
+            ),
+            'filter_state' => sanitize_title(
+                $state_slug
+            ),
+        ],
+        nwmd_directory_get_app_archive_url()
+    );
+}
+
+/**
+ * Return the business archive URL for one guided directory result.
+ *
+ * @param string $category_slug  Category slug.
+ * @param string $specialty_slug Specialty slug or "all".
+ * @param string $state_slug     State slug.
  * @param string $city_slug      City slug.
  *
  * @return string
@@ -423,6 +455,7 @@ function nwmd_directory_get_app_specialty_url(
 function nwmd_directory_get_app_city_url(
     $category_slug,
     $specialty_slug,
+    $state_slug,
     $city_slug
 ) {
 
@@ -433,6 +466,9 @@ function nwmd_directory_get_app_city_url(
             ),
             'filter_specialty' => sanitize_title(
                 $specialty_slug
+            ),
+            'filter_state' => sanitize_title(
+                $state_slug
             ),
             'filter_city' => sanitize_title(
                 $city_slug
@@ -528,6 +564,7 @@ function nwmd_directory_get_archive_filter_value($key) {
     $allowed_keys = [
         'filter_category',
         'filter_specialty',
+        'filter_state',
         'filter_city',
     ];
 
@@ -591,6 +628,7 @@ function nwmd_directory_filter_archive_query($query) {
     $filters = [
         'filter_category'  => 'nwmd_category',
         'filter_specialty' => 'nwmd_specialty',
+        'filter_state'     => 'nwmd_state',
         'filter_city'      => 'nwmd_city',
     ];
 
