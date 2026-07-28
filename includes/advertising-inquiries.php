@@ -494,6 +494,16 @@ function nwmd_directory_handle_advertising_inquiry() {
         'local-directory-framework'
     ) . ': ' . $safe_return_url;
 
+    $from_name_filter = static function ($from_name) {
+        return 'NW Monthly';
+    };
+
+    add_filter(
+        'wp_mail_from_name',
+        $from_name_filter,
+        999
+    );
+
     $mail_sent = wp_mail(
         $admin_email,
         $subject,
@@ -502,6 +512,12 @@ function nwmd_directory_handle_advertising_inquiry() {
             'Content-Type: text/plain; charset=UTF-8',
             'Reply-To: ' . $contact_email,
         ]
+    );
+
+    remove_filter(
+        'wp_mail_from_name',
+        $from_name_filter,
+        999
     );
 
     if (!$mail_sent) {
