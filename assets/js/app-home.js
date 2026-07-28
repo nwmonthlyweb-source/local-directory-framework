@@ -47,7 +47,7 @@
 
         window.setTimeout(
             removeSplash,
-            450
+            240
         );
-    }, 3000);
+    }, 1200);
 })();

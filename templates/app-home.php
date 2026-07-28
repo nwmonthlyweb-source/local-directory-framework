@@ -8,6 +8,12 @@ $categories = nwmd_directory_get_launch_categories();
 
 $manage_url = nwmd_directory_get_business_request_url();
 
+$splash_icon_url = NWMD_DIRECTORY_URL
+    . 'assets/icons/nw-monthly-192.png';
+
+$splash_image_url = NWMD_DIRECTORY_URL
+    . 'assets/images/nw-monthly-splash.jpg';
+
 $icons = [
     'restaurants' => '
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -84,6 +90,15 @@ $allowed_svg = [
         content="width=device-width, initial-scale=1"
     >
 
+    <link
+        id="nwmd-splash-preload"
+        rel="preload"
+        href="<?php echo esc_url($splash_image_url); ?>"
+        as="image"
+        type="image/jpeg"
+        fetchpriority="high"
+    >
+
     <?php wp_head(); ?>
 
     <style id="nwmd-splash-critical">
@@ -108,7 +123,7 @@ $allowed_svg = [
                     rgba(9, 18, 36, 0.46),
                     rgba(9, 18, 36, 0.68)
                 ),
-                url('https://nwmonthly.com/wp-content/uploads/2026/07/download.jpg')
+                url('<?php echo esc_url($splash_image_url); ?>')
                 center center / cover no-repeat;
         }
 
@@ -134,21 +149,34 @@ $allowed_svg = [
     ?>"
 >
     <div class="nwmd-app-splash__content">
-        <span
-            class="nwmd-app-splash__mark"
+        <img
+            class="nwmd-app-splash__icon"
+            src="<?php echo esc_url($splash_icon_url); ?>"
+            width="192"
+            height="192"
+            alt=""
             aria-hidden="true"
+            decoding="async"
+            fetchpriority="high"
         >
-            NW
-        </span>
 
         <p class="nwmd-app-splash__title">
             NW Monthly
         </p>
 
+        <p class="nwmd-app-splash__subtitle">
+            <?php
+            echo esc_html__(
+                'Local Business Directory',
+                'local-directory-framework'
+            );
+            ?>
+        </p>
+
         <p class="nwmd-app-splash__region">
             <?php
             echo esc_html__(
-                'Washington and Oregon',
+                'Washington • Oregon',
                 'local-directory-framework'
             );
             ?>
