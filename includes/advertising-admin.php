@@ -646,6 +646,40 @@ function nwmd_directory_save_advertisement() {
         }
     }
 
+    if (
+        !nwmd_directory_ad_specialty_is_guided(
+            $term_values['specialty_term_id']
+        )
+    ) {
+        nwmd_directory_redirect_advertising_admin(
+            'invalid-ad-values',
+            $ad_id
+        );
+    }
+
+    if (
+        $term_values['category_term_id'] > 0 &&
+        $term_values['specialty_term_id'] > 0
+    ) {
+        $specialty_category_term_id = absint(
+            get_term_meta(
+                $term_values['specialty_term_id'],
+                'nwmd_category_term_id',
+                true
+            )
+        );
+
+        if (
+            $specialty_category_term_id !==
+            $term_values['category_term_id']
+        ) {
+            nwmd_directory_redirect_advertising_admin(
+                'invalid-ad-values',
+                $ad_id
+            );
+        }
+    }
+
     $starts_at = isset($_POST['starts_at'])
         ? nwmd_directory_parse_ad_admin_datetime(
             wp_unslash($_POST['starts_at'])
@@ -878,6 +912,182 @@ function nwmd_directory_get_advertising_admin_terms($taxonomy) {
 }
 
 /**
+ * Return guided specialty slugs and their category slugs.
+ *
+ * @return array
+ */
+function nwmd_directory_get_guided_specialty_slug_map() {
+
+    static $slug_map = null;
+
+    if (is_array($slug_map)) {
+        return $slug_map;
+    }
+
+    $slug_map = [];
+
+    foreach (
+        nwmd_directory_get_launch_specialties()
+        as $category_slug => $specialties
+    ) {
+        $category_slug = sanitize_title(
+            $category_slug
+        );
+
+        foreach ($specialties as $specialty) {
+            $specialty_slug = isset($specialty['slug'])
+                ? sanitize_title($specialty['slug'])
+                : '';
+
+            if ('' === $specialty_slug) {
+                continue;
+            }
+
+            $slug_map[$specialty_slug] =
+                $category_slug;
+        }
+    }
+
+    return $slug_map;
+}
+
+/**
+ * Return whether one specialty belongs to the guided flow.
+ *
+ * @param int $term_id Specialty term ID.
+ *
+ * @return bool
+ */
+function nwmd_directory_ad_specialty_is_guided($term_id) {
+
+    $term_id = absint($term_id);
+
+    if (0 === $term_id) {
+        return true;
+    }
+
+    $specialty = get_term(
+        $term_id,
+        'nwmd_specialty'
+    );
+
+    if (
+        !$specialty instanceof WP_Term ||
+        is_wp_error($specialty)
+    ) {
+        return false;
+    }
+
+    $slug_map =
+        nwmd_directory_get_guided_specialty_slug_map();
+
+    if (!isset($slug_map[$specialty->slug])) {
+        return false;
+    }
+
+    $category_term_id = absint(
+        get_term_meta(
+            $specialty->term_id,
+            'nwmd_category_term_id',
+            true
+        )
+    );
+
+    if ($category_term_id < 1) {
+        return false;
+    }
+
+    $category = get_term(
+        $category_term_id,
+        'nwmd_category'
+    );
+
+    return (
+        $category instanceof WP_Term &&
+        !is_wp_error($category) &&
+        $category->slug === $slug_map[$specialty->slug]
+    );
+}
+
+/**
+ * Return only guided-flow specialties for ad targeting.
+ *
+ * Each result includes its guided parent category name.
+ *
+ * @return array
+ */
+function nwmd_directory_get_guided_advertising_specialties() {
+
+    $terms =
+        nwmd_directory_get_advertising_admin_terms(
+            'nwmd_specialty'
+        );
+
+    $specialties = [];
+
+    foreach ($terms as $term) {
+        if (
+            !$term instanceof WP_Term ||
+            !nwmd_directory_ad_specialty_is_guided(
+                $term->term_id
+            )
+        ) {
+            continue;
+        }
+
+        $category_term_id = absint(
+            get_term_meta(
+                $term->term_id,
+                'nwmd_category_term_id',
+                true
+            )
+        );
+
+        $category = get_term(
+            $category_term_id,
+            'nwmd_category'
+        );
+
+        if (
+            !$category instanceof WP_Term ||
+            is_wp_error($category)
+        ) {
+            continue;
+        }
+
+        $specialties[] = (object) [
+            'term_id' => absint($term->term_id),
+            'name' => sanitize_text_field($term->name),
+            'slug' => sanitize_title($term->slug),
+            'category_name' =>
+                sanitize_text_field($category->name),
+        ];
+    }
+
+    usort(
+        $specialties,
+        static function ($first, $second) {
+
+            $category_comparison = strcasecmp(
+                $first->category_name,
+                $second->category_name
+            );
+
+            if (0 !== $category_comparison) {
+                return $category_comparison;
+            }
+
+            return strcasecmp(
+                $first->name,
+                $second->name
+            );
+        }
+    );
+
+    return $specialties;
+}
+
+/**
  * Render the Advertising admin page.
  */
 function nwmd_directory_render_advertising_admin_page() {
@@ -945,9 +1155,8 @@ function nwmd_directory_render_advertising_admin_page() {
         'nwmd_category'
     );
 
-    $specialties = nwmd_directory_get_advertising_admin_terms(
-        'nwmd_specialty'
-    );
+    $specialties =
+        nwmd_directory_get_guided_advertising_specialties();
 
     $form_ad = $selected_ad ?: (object) [
         'id' => 0,
@@ -964,6 +1173,11 @@ function nwmd_directory_render_advertising_admin_page() {
         'ends_at' => null,
         'status' => 'draft',
     ];
+
+    $selected_specialty_is_guided =
+        nwmd_directory_ad_specialty_is_guided(
+            $form_ad->specialty_term_id
+        );
 
     $image_preview = $form_ad->image_attachment_id > 0
         ? wp_get_attachment_image(
@@ -1266,23 +1480,66 @@ function nwmd_directory_render_advertising_admin_page() {
                         <select
                             id="nwmd_ad_specialty_term_id"
                             name="specialty_term_id"
+                            required
                         >
-                            <option value="0">
-                                <?php echo esc_html__('All specialties', 'local-directory-framework'); ?>
+                            <?php if (
+                                absint($form_ad->specialty_term_id) > 0 &&
+                                !$selected_specialty_is_guided
+                            ) : ?>
+                                <option
+                                    value=""
+                                    selected
+                                    disabled
+                                >
+                                    <?php
+                                    echo esc_html__(
+                                        'Legacy specialty — choose a valid target',
+                                        'local-directory-framework'
+                                    );
+                                    ?>
+                                </option>
+                            <?php endif; ?>
+
+                            <option
+                                value="0"
+                                <?php selected(
+                                    absint($form_ad->specialty_term_id),
+                                    0
+                                ); ?>
+                            >
+                                <?php
+                                echo esc_html__(
+                                    'All specialties',
+                                    'local-directory-framework'
+                                );
+                                ?>
                             </option>
+
                             <?php foreach ($specialties as $specialty) : ?>
                                 <option
-                                    value="<?php echo esc_attr($specialty->term_id); ?>"
-                                    <?php selected($form_ad->specialty_term_id, $specialty->term_id); ?>
+                                    value="<?php echo esc_attr(
+                                        $specialty->term_id
+                                    ); ?>"
+                                    <?php selected(
+                                        $form_ad->specialty_term_id,
+                                        $specialty->term_id
+                                    ); ?>
                                 >
-                                    <?php echo esc_html($specialty->name); ?>
+                                    <?php
+                                    echo esc_html(
+                                        $specialty->category_name
+                                        . ' — '
+                                        . $specialty->name
+                                    );
+                                    ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
+
                         <p class="description">
                             <?php
                             echo esc_html__(
-                                'Leave targets on All to create a general fallback campaign.',
+                                'Only guided-flow specialties are shown. Choose a specialty from the same category target, or leave All specialties selected.',
                                 'local-directory-framework'
                             );
                             ?>
