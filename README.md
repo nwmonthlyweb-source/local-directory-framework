@@ -5,7 +5,7 @@ Reusable WordPress directory framework for NW Monthly.
 ## Initial Website
 
 - Domain: nwmonthly.com
-- Brand: Northwest Monthly Directory
+- Brand: NW Monthly
 - Region: Oregon
 - Public visitors do not need accounts.
 - Business changes use reviewed request forms.
