@@ -3,7 +3,7 @@
  * Plugin Name: Local Directory Framework
  * Description: Structured local business directory, monthly rankings, business requests, and advertising management.
  * Version: 0.1.28
- * Author: Northwest Monthly
+ * Author: NW Monthly
  * Text Domain: local-directory-framework
  */
 

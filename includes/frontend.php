@@ -896,7 +896,7 @@ function nwmd_directory_render_app_footer($show_manage = true) {
                 <p>
                     <?php
                     echo esc_html__(
-                        'NW Monthly is a local business directory app for Washington and Oregon. Choose a category and city to find local businesses, view profiles, and contact businesses directly.',
+                        'NW Monthly is a local business directory app for Washington and Oregon. Choose a category, service, state, and city to find local businesses, view profiles, and contact businesses directly.',
                         'local-directory-framework'
                     );
                     ?>
