@@ -600,3 +600,30 @@ body.nwmd-directory-app-body {
         right: -2px;
     }
 }
+
+/* Scrollable information and inquiry dialogs */
+.nwmd-info-dialog[open] {
+    display: flex;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.nwmd-info-dialog__header {
+    flex: 0 0 auto;
+}
+
+.nwmd-info-dialog__content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 520px) {
+    .nwmd-info-dialog[open] {
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
+    }
+}
