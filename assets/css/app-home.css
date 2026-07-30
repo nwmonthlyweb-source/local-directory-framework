@@ -281,7 +281,7 @@ body.nwmd-first-page-enabled
 html.nwmd-first-page-seen
 body.nwmd-first-page-enabled
 .nwmd-app-home {
-    display: block;
+    display: grid;
 }
 
 .nwmd-app-first-page {
