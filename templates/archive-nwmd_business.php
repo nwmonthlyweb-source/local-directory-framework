@@ -173,30 +173,20 @@ $back_url = home_url('/');
 
 if (
     $category_term instanceof WP_Term &&
-    $specialty_selection_complete
+    $state_term instanceof WP_Term &&
+    $city_term instanceof WP_Term
 ) {
-    if (
-        $state_term instanceof WP_Term &&
-        $city_term instanceof WP_Term
-    ) {
-        $back_url =
-            nwmd_directory_get_app_state_url(
+    $back_url = add_query_arg(
+        [
+            'nwmd_app_state' =>
+                $state_term->slug,
+            'nwmd_app_city' =>
+                $city_term->slug,
+            'nwmd_app_category' =>
                 $category_term->slug,
-                $current_specialty,
-                $state_term->slug
-            );
-    } elseif ($state_term instanceof WP_Term) {
-        $back_url =
-            nwmd_directory_get_app_specialty_url(
-                $category_term->slug,
-                $current_specialty
-            );
-    } else {
-        $back_url =
-            nwmd_directory_get_app_category_url(
-                $category_term->slug
-            );
-    }
+        ],
+        home_url('/')
+    );
 }
 
 $state_abbreviation = '';
@@ -620,7 +610,21 @@ if ($city_term instanceof WP_Term) {
                                 <?php endif; ?>
 
                                 <h2>
-                                    <a href="<?php echo esc_url(get_permalink()); ?>">
+                                    <a href="<?php echo esc_url(
+                                        add_query_arg(
+                                            [
+                                                'filter_category' =>
+                                                    $category_term->slug,
+                                                'filter_specialty' =>
+                                                    $current_specialty,
+                                                'filter_state' =>
+                                                    $state_term->slug,
+                                                'filter_city' =>
+                                                    $city_term->slug,
+                                            ],
+                                            get_permalink()
+                                        )
+                                    ); ?>">
                                         <?php echo esc_html(get_the_title()); ?>
                                     </a>
                                 </h2>
@@ -685,7 +689,21 @@ if ($city_term instanceof WP_Term) {
 
                                 <a
                                     class="nwmd-business-row__details"
-                                    href="<?php echo esc_url(get_permalink()); ?>"
+                                    href="<?php echo esc_url(
+                                        add_query_arg(
+                                            [
+                                                'filter_category' =>
+                                                    $category_term->slug,
+                                                'filter_specialty' =>
+                                                    $current_specialty,
+                                                'filter_state' =>
+                                                    $state_term->slug,
+                                                'filter_city' =>
+                                                    $city_term->slug,
+                                            ],
+                                            get_permalink()
+                                        )
+                                    ); ?>"
                                 >
                                     <?php
                                     echo esc_html__(

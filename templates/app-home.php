@@ -134,6 +134,47 @@ if (is_array($selected_category)) {
         $selected_region['slug']
     );
 }
+
+$landing_regions = $regions;
+
+$landing_order = [
+    'washington' => 0,
+    'oregon'     => 1,
+];
+
+usort(
+    $landing_regions,
+    static function ($first, $second) use ($landing_order) {
+
+        $first_rank =
+            $landing_order[$first['slug']]
+            ?? PHP_INT_MAX;
+
+        $second_rank =
+            $landing_order[$second['slug']]
+            ?? PHP_INT_MAX;
+
+        if ($first_rank === $second_rank) {
+            return strcasecmp(
+                $first['name'],
+                $second['name']
+            );
+        }
+
+        return $first_rank <=> $second_rank;
+    }
+);
+
+$is_landing = !is_array($selected_region);
+
+$body_classes = 'nwmd-app-body';
+
+if ($is_landing) {
+    $body_classes .= ' nwmd-app-body--landing';
+}
+
+$hero_image = NWMD_DIRECTORY_URL
+    . 'assets/images/nw-monthly-hero.webp';
 ?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
@@ -148,7 +189,7 @@ if (is_array($selected_category)) {
     <?php wp_head(); ?>
 </head>
 
-<body <?php body_class('nwmd-app-body'); ?>>
+<body <?php body_class($body_classes); ?>>
 <?php wp_body_open(); ?>
 
 <main
@@ -156,15 +197,27 @@ if (is_array($selected_category)) {
     id="primary"
     data-nwmd-app-home
 >
-    <section class="nwmd-app-home__panel">
-
-        <?php if (is_array($selected_region)) : ?>
-            <header class="nwmd-app-topbar">
+    <section
+        class="nwmd-app-home__panel<?php
+            echo $is_landing
+                ? ' nwmd-app-home__panel--landing'
+                : '';
+        ?>"
+    >
+        <header
+            class="nwmd-app-topbar<?php
+                echo $is_landing
+                    ? ' nwmd-app-topbar--landing'
+                    : '';
+            ?>"
+        >
+            <?php if (!$is_landing) : ?>
                 <a
                     class="nwmd-app-back"
                     href="<?php echo esc_url($back_url); ?>"
                 >
                     <span aria-hidden="true">&larr;</span>
+
                     <span>
                         <?php
                         echo esc_html__(
@@ -174,119 +227,115 @@ if (is_array($selected_category)) {
                         ?>
                     </span>
                 </a>
+            <?php endif; ?>
 
-                <a
-                    class="nwmd-app-brand"
-                    href="<?php echo esc_url($home_url); ?>"
+            <a
+                class="nwmd-app-brand"
+                href="<?php echo esc_url($home_url); ?>"
+            >
+                <span
+                    class="nwmd-app-brand__mark"
+                    aria-hidden="true"
                 >
-                    <span
-                        class="nwmd-app-brand__mark"
-                        aria-hidden="true"
-                    >
-                        NW
-                    </span>
+                    NW
+                </span>
 
-                    <span>NW Monthly</span>
-                </a>
-            </header>
-        <?php endif; ?>
+                <span>NW Monthly</span>
+            </a>
+        </header>
 
-        <?php if (!is_array($selected_region)) : ?>
+        <?php if ($is_landing) : ?>
 
             <div class="nwmd-home-landing">
-                <div class="nwmd-home-landing__copy">
-                    <div class="nwmd-app-brand nwmd-app-brand--large">
-                        <span
-                            class="nwmd-app-brand__mark"
-                            aria-hidden="true"
-                        >
-                            NW
-                        </span>
-
-                        <span>NW Monthly</span>
-                    </div>
-
-                    <p class="nwmd-home-eyebrow">
-                        <?php
-                        echo esc_html__(
-                            'Oregon and Washington',
-                            'local-directory-framework'
-                        );
-                        ?>
-                    </p>
-
-                    <h1>
-                        <?php
-                        echo esc_html__(
-                            'Discover trusted local businesses.',
-                            'local-directory-framework'
-                        );
-                        ?>
-                    </h1>
-
-                    <p class="nwmd-home-intro">
-                        <?php
-                        echo esc_html__(
-                            'Find local trades, services, restaurants, advertisements, deals, and coupons.',
-                            'local-directory-framework'
-                        );
-                        ?>
-                    </p>
+                <div class="nwmd-home-landing__visual">
+                    <img
+                        src="<?php echo esc_url($hero_image); ?>"
+                        alt="<?php
+                            echo esc_attr__(
+                                'NW Monthly local directory preview',
+                                'local-directory-framework'
+                            );
+                        ?>"
+                        loading="eager"
+                        fetchpriority="high"
+                    >
                 </div>
 
-                <section
-                    class="nwmd-state-selector"
-                    aria-labelledby="nwmd-state-title"
-                >
-                    <h2 id="nwmd-state-title">
-                        <?php
-                        echo esc_html__(
-                            'Choose your state',
-                            'local-directory-framework'
-                        );
-                        ?>
-                    </h2>
+                <div class="nwmd-home-landing__content">
+                    <div class="nwmd-home-landing__content-inner">
+                        <div class="nwmd-home-landing__copy">
+                            <h1>
+                                <?php
+                                echo wp_kses_post(
+                                    __(
+                                        'Discover trusted<br>local businesses.',
+                                        'local-directory-framework'
+                                    )
+                                );
+                                ?>
+                            </h1>
 
-                    <div class="nwmd-state-list">
-                        <?php foreach ($regions as $region) : ?>
-                            <a
-                                class="nwmd-state-button"
-                                href="<?php echo esc_url(
-                                    $state_url($region['slug'])
-                                ); ?>"
+                            <p class="nwmd-home-intro">
+                                <?php
+                                echo wp_kses_post(
+                                    __(
+                                        'Find top local trades, services,<br>restaurants, deals, and coupons.',
+                                        'local-directory-framework'
+                                    )
+                                );
+                                ?>
+                            </p>
+                        </div>
+
+                        <section
+                            class="nwmd-state-selector"
+                            aria-labelledby="nwmd-state-title"
+                        >
+                            <h2
+                                class="nwmd-visually-hidden"
+                                id="nwmd-state-title"
                             >
-                                <span>
-                                    <strong>
-                                        <?php
-                                        echo esc_html(
-                                            $region['name']
-                                        );
-                                        ?>
-                                    </strong>
+                                <?php
+                                echo esc_html__(
+                                    'Choose your state',
+                                    'local-directory-framework'
+                                );
+                                ?>
+                            </h2>
 
-                                    <small>
-                                        <?php
-                                        echo esc_html(
-                                            $region['abbreviation']
-                                        );
-                                        ?>
-                                    </small>
-                                </span>
+                            <div class="nwmd-state-list">
+                                <?php foreach ($landing_regions as $region) : ?>
+                                    <a
+                                        class="nwmd-state-button"
+                                        href="<?php echo esc_url(
+                                            $state_url($region['slug'])
+                                        ); ?>"
+                                    >
+                                        <strong>
+                                            <?php
+                                            echo esc_html(
+                                                $region['name']
+                                            );
+                                            ?>
+                                        </strong>
 
-                                <span aria-hidden="true">&rarr;</span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
+                                        <span aria-hidden="true">
+                                            <?php
+                                            echo esc_html(
+                                                $region['abbreviation']
+                                            );
+                                            ?>
+                                        </span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
 
-                    <p>
                         <?php
-                        echo esc_html__(
-                            'Select a state to view available cities.',
-                            'local-directory-framework'
-                        );
+                        nwmd_directory_render_app_footer();
                         ?>
-                    </p>
-                </section>
+                    </div>
+                </div>
             </div>
 
         <?php elseif (!is_array($selected_city)) : ?>
@@ -350,6 +399,8 @@ if (is_array($selected_category)) {
                 <?php endforeach; ?>
             </nav>
 
+            <?php nwmd_directory_render_app_footer(); ?>
+
         <?php elseif (!is_array($selected_category)) : ?>
 
             <header class="nwmd-step-heading">
@@ -401,6 +452,8 @@ if (is_array($selected_category)) {
                     </a>
                 <?php endforeach; ?>
             </nav>
+
+            <?php nwmd_directory_render_app_footer(); ?>
 
         <?php else : ?>
 
@@ -491,9 +544,9 @@ if (is_array($selected_category)) {
                 <?php endforeach; ?>
             </nav>
 
-        <?php endif; ?>
+            <?php nwmd_directory_render_app_footer(); ?>
 
-        <?php nwmd_directory_render_app_footer(); ?>
+        <?php endif; ?>
     </section>
 </main>
 

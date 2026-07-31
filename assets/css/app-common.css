@@ -160,9 +160,9 @@ body.nwmd-dialog-open {
         padding-left: 18px;
     }
 }
-/* Mobile directory installation */
+/* Directory installation */
 .nwmd-site-footer__install-wrap {
-    display: none;
+    display: block;
 }
 
 .nwmd-site-footer__install {
@@ -203,14 +203,8 @@ body.nwmd-dialog-open {
     stroke-width: 2;
 }
 
-@media (max-width: 720px) {
-    .nwmd-site-footer__install-wrap {
-        display: block;
-    }
-
-    .nwmd-site-footer__install:not([hidden]) {
-        display: inline-flex;
-    }
+.nwmd-site-footer__install:not([hidden]) {
+    display: inline-flex;
 }
 /* Equal mobile footer actions */
 @media (max-width: 720px) {

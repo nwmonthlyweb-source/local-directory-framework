@@ -114,7 +114,9 @@ while (have_posts()) :
     );
 
     $category_term = $category_terms[0] ?? null;
+    $specialty_term = $specialty_terms[0] ?? null;
     $city_term = $city_terms[0] ?? null;
+    $state_term = $state_terms[0] ?? null;
 
     $state_abbreviation = '';
 
@@ -145,20 +147,61 @@ while (have_posts()) :
         array_filter($location_parts)
     );
 
+    $current_category =
+        nwmd_directory_get_archive_filter_value(
+            'filter_category'
+        );
+
+    $current_specialty =
+        nwmd_directory_get_archive_filter_value(
+            'filter_specialty'
+        );
+
+    $current_state =
+        nwmd_directory_get_archive_filter_value(
+            'filter_state'
+        );
+
+    $current_city =
+        nwmd_directory_get_archive_filter_value(
+            'filter_city'
+        );
+
     $back_url = home_url('/');
 
     if (
+        '' !== $current_category &&
+        '' !== $current_specialty &&
+        '' !== $current_state &&
+        '' !== $current_city
+    ) {
+        $back_url = add_query_arg(
+            [
+                'filter_category' =>
+                    $current_category,
+                'filter_specialty' =>
+                    $current_specialty,
+                'filter_state' =>
+                    $current_state,
+                'filter_city' =>
+                    $current_city,
+            ],
+            nwmd_directory_get_app_archive_url()
+        );
+    } elseif (
         $category_term instanceof WP_Term &&
+        $state_term instanceof WP_Term &&
         $city_term instanceof WP_Term
     ) {
-        $back_url = nwmd_directory_get_app_city_url(
-            $category_term->slug,
-            $city_term->slug
-        );
-    } elseif ($category_term instanceof WP_Term) {
-        $back_url = nwmd_directory_get_app_category_url(
-            $category_term->slug
-        );
+        $back_url =
+            nwmd_directory_get_app_city_url(
+                $category_term->slug,
+                $specialty_term instanceof WP_Term
+                    ? $specialty_term->slug
+                    : 'all',
+                $state_term->slug,
+                $city_term->slug
+            );
     }
 
     $manage_business_url =

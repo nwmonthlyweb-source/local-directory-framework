@@ -112,15 +112,8 @@
             return;
         }
 
-        var isMobile = window.matchMedia(
-            '(max-width: 720px)'
-        ).matches;
-
-        installButton.hidden =
-            !isMobile ||
-            isStandalone();
+        installButton.hidden = isStandalone();
     }
-
     window.addEventListener(
         'beforeinstallprompt',
         function (event) {
