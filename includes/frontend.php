@@ -293,15 +293,6 @@ function nwmd_directory_enqueue_frontend_assets() {
         );
     }
 
-    if ($is_app_home) {
-        wp_enqueue_script(
-            'nwmd-directory-app-home-script',
-            NWMD_DIRECTORY_URL . 'assets/js/app-home.js',
-            [],
-            NWMD_DIRECTORY_VERSION,
-            true
-        );
-    }
     if ($is_business_archive) {
         wp_enqueue_style(
             'nwmd-directory-app-list',
