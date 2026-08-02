@@ -49,11 +49,10 @@ body.nwmd-app-body {
 }
 
 .nwmd-app-topbar--landing {
-    min-height: 65px;
+    min-height: 54px;
     margin: 0;
     padding-right: clamp(24px, 3.5vw, 56px);
     padding-left: clamp(24px, 3.5vw, 56px);
-    border-bottom: 1px solid #dbe4f0;
     background:
         linear-gradient(
             90deg,
@@ -128,48 +127,48 @@ body.nwmd-app-body {
 }
 
 .nwmd-home-landing__visual {
-    padding:
-        clamp(22px, 3.5vw, 48px)
-        clamp(36px, 6vw, 88px)
-        clamp(30px, 5vw, 72px);
+    padding: 0;
     background: #ffffff;
 }
 
 .nwmd-home-landing__visual img {
     display: block;
     width: min(100%, 680px);
-    max-height: calc(100svh - 145px);
+    max-height: calc(100svh - 70px);
     object-fit: contain;
 }
 
 .nwmd-home-landing__content {
     padding:
-        clamp(24px, 4vw, 54px)
+        clamp(12px, 2.5vw, 32px)
         clamp(24px, 5vw, 72px)
-        clamp(36px, 5vw, 72px);
+        clamp(30px, 4vw, 58px);
     background: #f0f4f9;
 }
 
 .nwmd-home-landing__content-inner {
     width: min(100%, 560px);
     margin: auto;
+    container-type: inline-size;
 }
 
 .nwmd-home-landing__copy h1 {
     margin: 0;
     color: #172033;
-    font-size: clamp(2.7rem, 4.8vw, 4.7rem);
+    font-size: clamp(2.15rem, 9.8cqw, 3.78rem);
     font-weight: 900;
-    letter-spacing: -0.06em;
+    letter-spacing: -0.055em;
     line-height: 1;
+    white-space: nowrap;
 }
 
 .nwmd-home-intro {
     max-width: 640px;
     margin: 24px 0 0;
     color: #526078;
-    font-size: clamp(1.5rem, 2.3vw, 1.85rem);
+    font-size: clamp(1.15rem, 5.3cqw, 1.88rem);
     line-height: 1.4;
+    white-space: nowrap;
 }
 
 .nwmd-state-selector {
@@ -348,7 +347,7 @@ body.nwmd-app-body {
     }
 
     .nwmd-app-topbar--landing {
-        min-height: 58px;
+        min-height: 50px;
         margin: 0;
         padding-right: 18px;
         padding-left: 18px;
@@ -361,7 +360,7 @@ body.nwmd-app-body {
     }
 
     .nwmd-home-landing__visual {
-        padding: 10px 18px 2px;
+        padding: 0;
         background: #f0f4f9;
     }
 
@@ -371,7 +370,7 @@ body.nwmd-app-body {
     }
 
     .nwmd-home-landing__content {
-        padding: 14px 18px 30px;
+        padding: 8px 18px 26px;
     }
 
     .nwmd-home-landing__content-inner {
@@ -379,15 +378,15 @@ body.nwmd-app-body {
     }
 
     .nwmd-home-landing__copy h1 {
-        font-size: clamp(2.8rem, 12.5vw, 3.7rem);
-        letter-spacing: -0.057em;
-        line-height: 0.97;
+        font-size: clamp(1.55rem, 9.9cqw, 2.55rem);
+        letter-spacing: -0.045em;
+        line-height: 1;
     }
 
     .nwmd-home-intro {
-        margin-top: 14px;
-        font-size: clamp(1.24rem, 5vw, 1.36rem);
-        line-height: 1.42;
+        margin-top: 12px;
+        font-size: clamp(0.95rem, 5.7cqw, 1.38rem);
+        line-height: 1.4;
     }
 
     .nwmd-state-selector {

@@ -268,7 +268,7 @@ $hero_image = NWMD_DIRECTORY_URL
                                 <?php
                                 echo wp_kses_post(
                                     __(
-                                        'Discover trusted<br>local businesses.',
+                                        'Top local businesses<br>across the Northwest.',
                                         'local-directory-framework'
                                     )
                                 );
@@ -279,7 +279,7 @@ $hero_image = NWMD_DIRECTORY_URL
                                 <?php
                                 echo wp_kses_post(
                                     __(
-                                        'Find top local trades, services,<br>restaurants, deals, and coupons.',
+                                        'Find trusted services, current deals,<br>and local coupons all in one place.',
                                         'local-directory-framework'
                                     )
                                 );
