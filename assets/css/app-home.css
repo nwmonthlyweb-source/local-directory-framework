@@ -262,6 +262,33 @@ body.nwmd-app-body {
     color: #65738a;
 }
 
+.nwmd-choice-groups {
+    display: grid;
+    width: min(820px, 100%);
+    gap: 26px;
+    margin: 0 auto;
+}
+
+.nwmd-choice-group h2 {
+    margin: 0 0 14px;
+    color: #2563eb;
+    font-size: 1.2rem;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+}
+
+.nwmd-choice-group .nwmd-choice-grid {
+    width: 100%;
+}
+
+.nwmd-choice-group-divider {
+    width: 100%;
+    height: 0;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid #dbe4f0;
+}
+
 .nwmd-choice-grid {
     display: grid;
     width: min(820px, 100%);

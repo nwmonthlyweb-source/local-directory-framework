@@ -355,43 +355,86 @@ $hero_image = NWMD_DIRECTORY_URL
                 </h1>
             </header>
 
-            <nav
-                class="nwmd-choice-grid"
-                aria-label="<?php
-                    echo esc_attr__(
-                        'Cities',
-                        'local-directory-framework'
-                    );
-                ?>"
-            >
-                <?php foreach ($selected_region['cities'] as $city) : ?>
-                    <a
-                        class="nwmd-choice-button"
-                        href="<?php echo esc_url(
-                            $city_url(
-                                $selected_region['slug'],
-                                $city['slug']
-                            )
-                        ); ?>"
-                    >
-                        <span>
-                            <strong>
-                                <?php echo esc_html($city['name']); ?>
-                            </strong>
+            <?php
+            $city_groups =
+                nwmd_directory_get_region_city_groups(
+                    $selected_region
+                );
 
-                            <small>
+            $city_group_labels = [
+                'top' => __(
+                    'Top Cities',
+                    'local-directory-framework'
+                ),
+                'other' => __(
+                    'Other Cities',
+                    'local-directory-framework'
+                ),
+            ];
+
+            $rendered_city_group = false;
+            ?>
+
+            <div class="nwmd-choice-groups">
+                <?php foreach ($city_groups as $group_key => $cities) : ?>
+                    <?php if (!empty($cities)) : ?>
+                        <?php if ($rendered_city_group) : ?>
+                            <hr class="nwmd-choice-group-divider">
+                        <?php endif; ?>
+
+                        <section class="nwmd-choice-group">
+                            <h2>
                                 <?php
                                 echo esc_html(
-                                    $selected_region['abbreviation']
+                                    $city_group_labels[$group_key]
+                                    ?? $city_group_labels['other']
                                 );
                                 ?>
-                            </small>
-                        </span>
+                            </h2>
 
-                        <span aria-hidden="true">&rarr;</span>
-                    </a>
+                            <nav
+                                class="nwmd-choice-grid"
+                                aria-label="<?php
+                                    echo esc_attr(
+                                        $city_group_labels[$group_key]
+                                        ?? $city_group_labels['other']
+                                    );
+                                ?>"
+                            >
+                                <?php foreach ($cities as $city) : ?>
+                                    <a
+                                        class="nwmd-choice-button"
+                                        href="<?php echo esc_url(
+                                            $city_url(
+                                                $selected_region['slug'],
+                                                $city['slug']
+                                            )
+                                        ); ?>"
+                                    >
+                                        <span>
+                                            <strong>
+                                                <?php echo esc_html($city['name']); ?>
+                                            </strong>
+
+                                            <small>
+                                                <?php
+                                                echo esc_html(
+                                                    $selected_region['abbreviation']
+                                                );
+                                                ?>
+                                            </small>
+                                        </span>
+
+                                        <span aria-hidden="true">&rarr;</span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </nav>
+                        </section>
+
+                        <?php $rendered_city_group = true; ?>
+                    <?php endif; ?>
                 <?php endforeach; ?>
-            </nav>
+            </div>
 
             <?php nwmd_directory_render_app_footer(); ?>
 

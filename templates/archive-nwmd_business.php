@@ -488,27 +488,70 @@ if ($city_term instanceof WP_Term) {
                 </p>
             </header>
 
-            <div class="nwmd-city-grid">
-                <?php foreach ($selected_region['cities'] as $city) : ?>
-                    <a
-                        class="nwmd-city-button"
-                        href="<?php echo esc_url(
-                            nwmd_directory_get_app_city_url(
-                                $category_term->slug,
-                                $current_specialty,
-                                $state_term->slug,
-                                $city['slug']
-                            )
-                        ); ?>"
-                    >
-                        <strong>
-                            <?php echo esc_html($city['name']); ?>
-                        </strong>
+            <?php
+            $city_groups =
+                nwmd_directory_get_region_city_groups(
+                    $selected_region
+                );
 
-                        <span>
-                            <?php echo esc_html($state_abbreviation); ?>
-                        </span>
-                    </a>
+            $city_group_labels = [
+                'top' => __(
+                    'Top Cities',
+                    'local-directory-framework'
+                ),
+                'other' => __(
+                    'Other Cities',
+                    'local-directory-framework'
+                ),
+            ];
+
+            $rendered_city_group = false;
+            ?>
+
+            <div class="nwmd-city-groups">
+                <?php foreach ($city_groups as $group_key => $cities) : ?>
+                    <?php if (!empty($cities)) : ?>
+                        <?php if ($rendered_city_group) : ?>
+                            <hr class="nwmd-city-group-divider">
+                        <?php endif; ?>
+
+                        <section class="nwmd-city-group">
+                            <h2>
+                                <?php
+                                echo esc_html(
+                                    $city_group_labels[$group_key]
+                                    ?? $city_group_labels['other']
+                                );
+                                ?>
+                            </h2>
+
+                            <div class="nwmd-city-grid">
+                                <?php foreach ($cities as $city) : ?>
+                                    <a
+                                        class="nwmd-city-button"
+                                        href="<?php echo esc_url(
+                                            nwmd_directory_get_app_city_url(
+                                                $category_term->slug,
+                                                $current_specialty,
+                                                $state_term->slug,
+                                                $city['slug']
+                                            )
+                                        ); ?>"
+                                    >
+                                        <strong>
+                                            <?php echo esc_html($city['name']); ?>
+                                        </strong>
+
+                                        <span>
+                                            <?php echo esc_html($state_abbreviation); ?>
+                                        </span>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </section>
+
+                        <?php $rendered_city_group = true; ?>
+                    <?php endif; ?>
                 <?php endforeach; ?>
             </div>
 

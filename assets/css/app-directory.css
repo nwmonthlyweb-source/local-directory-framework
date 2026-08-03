@@ -155,6 +155,14 @@ body.nwmd-directory-app-body {
     text-transform: none;
 }
 
+.nwmd-city-group-divider {
+    width: 100%;
+    height: 0;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid #dbe4f0;
+}
+
 .nwmd-city-button span {
     color: #2563eb;
     font-size: 0.82rem;
