@@ -209,6 +209,33 @@ body.nwmd-directory-app-body {
     font-size: 0.92rem;
 }
 
+.nwmd-business-row__deal {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 7px 10px;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    background: #f0fdf4;
+    color: #166534;
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.nwmd-business-row__deal-label {
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.nwmd-business-row__deal-text {
+    font-weight: 700;
+}
+
 .nwmd-business-row__actions {
     display: flex;
     align-items: center;

@@ -553,6 +553,20 @@ if ($city_term instanceof WP_Term) {
 
             <?php if (have_posts()) : ?>
 
+                <?php
+                global $wp_query;
+
+                $business_post_ids = wp_list_pluck(
+                    (array) $wp_query->posts,
+                    'ID'
+                );
+
+                $featured_deals =
+                    nwmd_directory_get_featured_business_deals_for_businesses(
+                        $business_post_ids
+                    );
+                ?>
+
                 <div class="nwmd-business-list">
                     <?php while (have_posts()) : ?>
                         <?php
@@ -596,6 +610,9 @@ if ($city_term instanceof WP_Term) {
                                 20
                             );
                         }
+
+                        $featured_deal =
+                            $featured_deals[$post_id] ?? null;
                         ?>
 
                         <article <?php post_class('nwmd-business-row'); ?>>
@@ -659,6 +676,33 @@ if ($city_term instanceof WP_Term) {
                                         );
                                         ?>
                                     </p>
+                                <?php endif; ?>
+
+                                <?php if (is_object($featured_deal)) : ?>
+                                    <div class="nwmd-business-row__deal">
+                                        <span
+                                            class="nwmd-business-row__deal-label"
+                                        >
+                                            <?php
+                                            echo esc_html__(
+                                                'Deal',
+                                                'local-directory-framework'
+                                            );
+                                            ?>
+                                        </span>
+
+                                        <span
+                                            class="nwmd-business-row__deal-text"
+                                        >
+                                            <?php
+                                            echo esc_html(
+                                                nwmd_directory_get_business_deal_card_text(
+                                                    $featured_deal
+                                                )
+                                            );
+                                            ?>
+                                        </span>
+                                    </div>
                                 <?php endif; ?>
                             </div>
 

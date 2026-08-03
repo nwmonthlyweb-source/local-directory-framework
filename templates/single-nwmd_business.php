@@ -241,6 +241,11 @@ while (have_posts()) :
         'the_content',
         get_the_content()
     );
+
+    $active_deals =
+        nwmd_directory_get_active_business_deals(
+            $post_id
+        );
     ?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
@@ -379,7 +384,149 @@ while (have_posts()) :
                 <?php endif; ?>
             </nav>
         <?php endif; ?>
+        <?php if (!empty($active_deals)) : ?>
+            <section
+                class="nwmd-profile-deals"
+                aria-labelledby="nwmd-profile-deals-title"
+            >
+                <h2 id="nwmd-profile-deals-title">
+                    <?php
+                    echo esc_html__(
+                        'Current Deals',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </h2>
 
+                <div class="nwmd-profile-deal-list">
+                    <?php foreach ($active_deals as $deal) : ?>
+                        <article class="nwmd-profile-deal">
+                            <p class="nwmd-profile-deal__label">
+                                <?php
+                                echo esc_html__(
+                                    'Verified Offer',
+                                    'local-directory-framework'
+                                );
+                                ?>
+                            </p>
+
+                            <h3>
+                                <?php echo esc_html($deal->title); ?>
+                            </h3>
+
+                            <p class="nwmd-profile-deal__description">
+                                <?php
+                                echo wp_kses_post(
+                                    nl2br(
+                                        esc_html(
+                                            (string) $deal->description
+                                        )
+                                    )
+                                );
+                                ?>
+                            </p>
+
+                            <?php if ('' !== (string) $deal->promo_code) : ?>
+                                <p class="nwmd-profile-deal__code">
+                                    <strong>
+                                        <?php
+                                        echo esc_html__(
+                                            'Promo code:',
+                                            'local-directory-framework'
+                                        );
+                                        ?>
+                                    </strong>
+
+                                    <code>
+                                        <?php
+                                        echo esc_html(
+                                            $deal->promo_code
+                                        );
+                                        ?>
+                                    </code>
+                                </p>
+                            <?php endif; ?>
+
+                            <div class="nwmd-profile-deal__meta">
+                                <span>
+                                    <strong>
+                                        <?php
+                                        echo esc_html__(
+                                            'Expires:',
+                                            'local-directory-framework'
+                                        );
+                                        ?>
+                                    </strong>
+
+                                    <?php
+                                    $expiration =
+                                        nwmd_directory_format_business_deal_date(
+                                            $deal->expires_at
+                                        );
+
+                                    echo esc_html(
+                                        '' !== $expiration
+                                            ? $expiration
+                                            : __(
+                                                'No expiration date published',
+                                                'local-directory-framework'
+                                            )
+                                    );
+                                    ?>
+                                </span>
+
+                                <span>
+                                    <strong>
+                                        <?php
+                                        echo esc_html__(
+                                            'Last verified:',
+                                            'local-directory-framework'
+                                        );
+                                        ?>
+                                    </strong>
+
+                                    <?php
+                                    echo esc_html(
+                                        nwmd_directory_format_business_deal_date(
+                                            $deal->verified_at
+                                        )
+                                    );
+                                    ?>
+                                </span>
+                            </div>
+
+                            <?php
+                            $deal_source_url = esc_url_raw(
+                                (string) $deal->source_url
+                            );
+
+                            if (
+                                wp_http_validate_url(
+                                    $deal_source_url
+                                )
+                            ) :
+                                ?>
+                                <a
+                                    class="nwmd-profile-deal__source"
+                                    href="<?php echo esc_url(
+                                        $deal_source_url
+                                    ); ?>"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <?php
+                                    echo esc_html__(
+                                        'View Official Offer',
+                                        'local-directory-framework'
+                                    );
+                                    ?>
+                                </a>
+                            <?php endif; ?>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php endif; ?>
         <?php if ('' !== trim(wp_strip_all_tags($content))) : ?>
             <section class="nwmd-profile-description">
                 <?php echo wp_kses_post($content); ?>

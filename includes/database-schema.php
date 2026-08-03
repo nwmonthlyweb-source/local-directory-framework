@@ -17,6 +17,7 @@ function nwmd_directory_install_schema() {
 
     $business_index_table = $wpdb->prefix . 'nwmd_business_index';
     $sources_table        = $wpdb->prefix . 'nwmd_business_sources';
+    $deals_table          = $wpdb->prefix . 'nwmd_business_deals';
     $periods_table        = $wpdb->prefix . 'nwmd_ranking_periods';
     $rankings_table       = $wpdb->prefix . 'nwmd_ranking_entries';
     $requests_table       = $wpdb->prefix . 'nwmd_business_requests';
@@ -79,6 +80,35 @@ function nwmd_directory_install_schema() {
         KEY verified_at (verified_at)
     ) {$charset_collate};";
 
+    $queries[] = "CREATE TABLE {$deals_table} (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        business_post_id bigint(20) unsigned NOT NULL,
+        deal_slug varchar(191) NOT NULL,
+        title varchar(255) NOT NULL DEFAULT '',
+        card_text varchar(255) NOT NULL DEFAULT '',
+        description longtext NOT NULL,
+        promo_code varchar(100) NOT NULL DEFAULT '',
+        source_url varchar(2048) NOT NULL DEFAULT '',
+        starts_at datetime DEFAULT NULL,
+        expires_at datetime DEFAULT NULL,
+        verified_at datetime DEFAULT NULL,
+        status varchar(40) NOT NULL DEFAULT 'draft',
+        is_featured tinyint(1) unsigned NOT NULL DEFAULT 0,
+        created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+        updated_by bigint(20) unsigned NOT NULL DEFAULT 0,
+        created_at datetime NOT NULL,
+        updated_at datetime NOT NULL,
+        archived_at datetime DEFAULT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY business_deal (business_post_id, deal_slug),
+        KEY business_post_id (business_post_id),
+        KEY status (status),
+        KEY starts_at (starts_at),
+        KEY expires_at (expires_at),
+        KEY verified_at (verified_at),
+        KEY is_featured (is_featured),
+        KEY archived_at (archived_at)
+    ) {$charset_collate};";
     $queries[] = "CREATE TABLE {$periods_table} (
         id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
         period_key varchar(20) NOT NULL,
@@ -109,13 +139,7 @@ function nwmd_directory_install_schema() {
         published_at datetime DEFAULT NULL,
         created_at datetime NOT NULL,
         PRIMARY KEY  (id),
-        UNIQUE KEY ranking_position (
-            ranking_period_id,
-            city_term_id,
-            category_term_id,
-            specialty_term_id,
-            rank_position
-        ),
+        UNIQUE KEY ranking_position (ranking_period_id, city_term_id, category_term_id, specialty_term_id, rank_position),
         KEY ranking_period_id (ranking_period_id),
         KEY state_term_id (state_term_id),
         KEY city_term_id (city_term_id),
