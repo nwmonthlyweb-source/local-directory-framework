@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Local Directory Framework
  * Description: Structured local business directory, monthly rankings, business requests, and advertising management.
- * Version: 0.1.57
+ * Version: 0.1.58
  * Author: NW Monthly
  * Text Domain: local-directory-framework
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('NWMD_DIRECTORY_VERSION', '0.1.57');
+define('NWMD_DIRECTORY_VERSION', '0.1.58');
 define('NWMD_DIRECTORY_PATH', plugin_dir_path(__FILE__));
 define('NWMD_DIRECTORY_URL', plugin_dir_url(__FILE__));
 
@@ -24,6 +24,9 @@ require_once NWMD_DIRECTORY_PATH . 'includes/business-details.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-deals.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-deals-actions.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-deals-admin.php';
+require_once NWMD_DIRECTORY_PATH . 'includes/business-deals-csv-import-validation.php';
+require_once NWMD_DIRECTORY_PATH . 'includes/business-deals-csv-import-execution.php';
+require_once NWMD_DIRECTORY_PATH . 'includes/business-deals-csv-import-admin.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-index.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-sources-admin.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/business-csv-import-validation.php';
