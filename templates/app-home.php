@@ -535,8 +535,28 @@ $hero_image = NWMD_DIRECTORY_URL
                     );
                 ?>"
             >
+                <?php foreach ($specialties as $specialty) : ?>
+                    <a
+                        class="nwmd-choice-button"
+                        href="<?php echo esc_url(
+                            $results_url(
+                                $selected_category['slug'],
+                                $specialty['slug'],
+                                $selected_region['slug'],
+                                $selected_city['slug']
+                            )
+                        ); ?>"
+                    >
+                        <strong>
+                            <?php echo esc_html($specialty['name']); ?>
+                        </strong>
+
+                        <span aria-hidden="true">&rarr;</span>
+                    </a>
+                <?php endforeach; ?>
+
                 <a
-                    class="nwmd-choice-button"
+                    class="nwmd-choice-button nwmd-choice-button--all"
                     href="<?php echo esc_url(
                         $results_url(
                             $selected_category['slug'],
@@ -559,26 +579,6 @@ $hero_image = NWMD_DIRECTORY_URL
 
                     <span aria-hidden="true">&rarr;</span>
                 </a>
-
-                <?php foreach ($specialties as $specialty) : ?>
-                    <a
-                        class="nwmd-choice-button"
-                        href="<?php echo esc_url(
-                            $results_url(
-                                $selected_category['slug'],
-                                $specialty['slug'],
-                                $selected_region['slug'],
-                                $selected_city['slug']
-                            )
-                        ); ?>"
-                    >
-                        <strong>
-                            <?php echo esc_html($specialty['name']); ?>
-                        </strong>
-
-                        <span aria-hidden="true">&rarr;</span>
-                    </a>
-                <?php endforeach; ?>
             </nav>
 
             <?php nwmd_directory_render_app_footer(); ?>

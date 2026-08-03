@@ -486,3 +486,23 @@ body.nwmd-app-body {
         background: transparent;
     }
 }
+
+/* Emphasized all-category option. */
+.nwmd-choice-button--all {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    border-color: #93c5fd;
+    background: #eff6ff;
+    color: #1e3a8a;
+}
+
+.nwmd-choice-button--all > span:last-child {
+    color: currentColor;
+}
+
+.nwmd-choice-button--all:hover,
+.nwmd-choice-button--all:focus-visible {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+}

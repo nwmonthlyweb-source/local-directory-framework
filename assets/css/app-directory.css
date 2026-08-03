@@ -662,3 +662,23 @@ body.nwmd-directory-app-body {
         max-height: calc(100dvh - 16px);
     }
 }
+
+/* Emphasized all-category option. */
+.nwmd-app-button--all {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    border-color: #93c5fd;
+    background: #eff6ff;
+    color: #1e3a8a;
+}
+
+.nwmd-app-button--all span {
+    color: currentColor;
+}
+
+.nwmd-app-button--all:hover,
+.nwmd-app-button--all:focus-visible {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+}

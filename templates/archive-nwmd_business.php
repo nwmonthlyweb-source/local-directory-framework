@@ -355,8 +355,26 @@ if ($city_term instanceof WP_Term) {
             </header>
 
             <nav class="nwmd-app-button-grid">
+                <?php foreach ($specialties as $specialty) : ?>
+                    <a
+                        class="nwmd-app-button"
+                        href="<?php echo esc_url(
+                            nwmd_directory_get_app_specialty_url(
+                                $category_term->slug,
+                                $specialty['slug']
+                            )
+                        ); ?>"
+                    >
+                        <strong>
+                            <?php echo esc_html($specialty['name']); ?>
+                        </strong>
+
+                        <span aria-hidden="true">→</span>
+                    </a>
+                <?php endforeach; ?>
+
                 <a
-                    class="nwmd-app-button"
+                    class="nwmd-app-button nwmd-app-button--all"
                     href="<?php echo esc_url(
                         nwmd_directory_get_app_specialty_url(
                             $category_term->slug,
@@ -378,24 +396,6 @@ if ($city_term instanceof WP_Term) {
 
                     <span aria-hidden="true">→</span>
                 </a>
-
-                <?php foreach ($specialties as $specialty) : ?>
-                    <a
-                        class="nwmd-app-button"
-                        href="<?php echo esc_url(
-                            nwmd_directory_get_app_specialty_url(
-                                $category_term->slug,
-                                $specialty['slug']
-                            )
-                        ); ?>"
-                    >
-                        <strong>
-                            <?php echo esc_html($specialty['name']); ?>
-                        </strong>
-
-                        <span aria-hidden="true">→</span>
-                    </a>
-                <?php endforeach; ?>
             </nav>
 
         <?php elseif (!$state_term instanceof WP_Term) : ?>
