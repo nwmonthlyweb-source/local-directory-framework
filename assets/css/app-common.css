@@ -1,3 +1,7 @@
+:root {
+    --nwmd-page-shell-max-width: 1200px;
+}
+
 .nwmd-site-footer,
 .nwmd-site-footer * {
     box-sizing: border-box;
@@ -13,16 +17,17 @@
 
 .nwmd-site-footer__manage {
     display: inline-flex;
-    min-height: 44px;
+    width: min(100%, 360px);
+    min-height: 50px;
     align-items: center;
     justify-content: center;
-    padding: 9px 18px;
+    padding: 11px 18px;
     border: 1px solid #bfdbfe;
     border-radius: 999px;
     background: #ffffff;
     color: #1d4ed8;
-    font-size: 0.9rem;
-    font-weight: 800;
+    font-size: 0.92rem;
+    font-weight: 850;
     text-decoration: none;
 }
 

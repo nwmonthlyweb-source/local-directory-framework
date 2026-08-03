@@ -204,11 +204,18 @@ while (have_posts()) :
             );
     }
 
+    $back_url =
+        nwmd_directory_get_requested_public_return_url(
+            $back_url
+        );
+
     $manage_business_url =
         nwmd_directory_get_business_request_url(
             [
                 'request_type' => 'update',
                 'business_id'  => $post_id,
+                'return_to'    =>
+                    nwmd_directory_get_current_public_url(),
             ]
         );
 
@@ -254,20 +261,6 @@ while (have_posts()) :
 <main class="nwmd-profile-app" id="primary">
     <article class="nwmd-profile-app__panel">
         <header class="nwmd-profile-bar">
-            <a
-                class="nwmd-profile-bar__back"
-                href="<?php echo esc_url($back_url); ?>"
-            >
-                <span aria-hidden="true">←</span>
-
-                <?php
-                echo esc_html__(
-                    'Back',
-                    'local-directory-framework'
-                );
-                ?>
-            </a>
-
             <a
                 class="nwmd-profile-bar__brand"
                 href="<?php echo esc_url(home_url('/')); ?>"

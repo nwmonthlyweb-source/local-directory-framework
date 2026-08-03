@@ -184,6 +184,18 @@ function nwmd_directory_get_business_request_url(
         '/manage-a-business/'
     );
 
+    if (isset($arguments['return_to'])) {
+        $arguments['return_to'] =
+            nwmd_directory_validate_public_return_url(
+                $arguments['return_to'],
+                ''
+            );
+
+        if ('' === $arguments['return_to']) {
+            unset($arguments['return_to']);
+        }
+    }
+
     if (!empty($arguments)) {
         $url = add_query_arg(
             $arguments,
@@ -192,6 +204,103 @@ function nwmd_directory_get_business_request_url(
     }
 
     return $url;
+}
+
+/**
+ * Validate a same-site public return URL.
+ *
+ * @param string $url      Candidate return URL.
+ * @param string $fallback Safe fallback URL.
+ *
+ * @return string
+ */
+function nwmd_directory_validate_public_return_url(
+    $url,
+    $fallback = ''
+) {
+
+    $url = is_string($url)
+        ? esc_url_raw($url)
+        : '';
+
+    $fallback = is_string($fallback)
+        ? esc_url_raw($fallback)
+        : '';
+
+    return wp_validate_redirect(
+        $url,
+        $fallback
+    );
+}
+
+/**
+ * Return a requested same-site public return URL.
+ *
+ * @param string $fallback Safe fallback URL.
+ *
+ * @return string
+ */
+function nwmd_directory_get_requested_public_return_url(
+    $fallback = ''
+) {
+
+    $return_to = (
+        isset($_GET['return_to']) &&
+        is_string($_GET['return_to'])
+    )
+        ? wp_unslash($_GET['return_to'])
+        : '';
+
+    return nwmd_directory_validate_public_return_url(
+        $return_to,
+        $fallback
+    );
+}
+
+/**
+ * Return the current same-site public URL.
+ *
+ * @return string
+ */
+function nwmd_directory_get_current_public_url() {
+
+    $request_uri = isset($_SERVER['REQUEST_URI'])
+        ? wp_unslash($_SERVER['REQUEST_URI'])
+        : '/';
+
+    if (!is_string($request_uri) || '' === $request_uri) {
+        $request_uri = '/';
+    }
+
+    $request_uri = '/' . ltrim(
+        $request_uri,
+        '/'
+    );
+
+    $home_parts = wp_parse_url(
+        home_url('/')
+    );
+
+    if (
+        !is_array($home_parts) ||
+        empty($home_parts['scheme']) ||
+        empty($home_parts['host'])
+    ) {
+        return home_url('/');
+    }
+
+    $origin = $home_parts['scheme']
+        . '://'
+        . $home_parts['host'];
+
+    if (!empty($home_parts['port'])) {
+        $origin .= ':' . absint($home_parts['port']);
+    }
+
+    return nwmd_directory_validate_public_return_url(
+        $origin . $request_uri,
+        home_url('/')
+    );
 }
 
 /**
@@ -569,6 +678,21 @@ function nwmd_directory_redirect_business_request(
     $notice,
     $arguments = []
 ) {
+
+    if (
+        !isset($arguments['return_to']) &&
+        isset($_POST['return_to'])
+    ) {
+        $return_to =
+            nwmd_directory_validate_public_return_url(
+                wp_unslash($_POST['return_to']),
+                ''
+            );
+
+        if ('' !== $return_to) {
+            $arguments['return_to'] = $return_to;
+        }
+    }
 
     $arguments['nwmd_request_notice'] = sanitize_key(
         $notice

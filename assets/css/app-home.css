@@ -26,7 +26,10 @@ body.nwmd-app-body {
 }
 
 .nwmd-app-home__panel {
-    width: min(1080px, calc(100% - 44px));
+    width: min(
+        var(--nwmd-page-shell-max-width),
+        calc(100% - 44px)
+    );
     margin: 0 auto;
     padding:
         max(28px, env(safe-area-inset-top))
@@ -43,7 +46,7 @@ body.nwmd-app-body {
     display: flex;
     min-height: 50px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 16px;
     margin-bottom: 46px;
 }
@@ -63,27 +66,17 @@ body.nwmd-app-body {
         );
 }
 
-.nwmd-app-back,
 .nwmd-app-brand {
     display: inline-flex;
     align-items: center;
+    gap: 9px;
     color: #172033;
     font-size: 0.94rem;
     font-weight: 800;
+    letter-spacing: -0.025em;
     text-decoration: none;
 }
 
-.nwmd-app-back {
-    gap: 7px;
-}
-
-.nwmd-app-brand {
-    gap: 9px;
-    letter-spacing: -0.025em;
-}
-
-.nwmd-app-back:hover,
-.nwmd-app-back:focus-visible,
 .nwmd-app-brand:hover,
 .nwmd-app-brand:focus-visible {
     color: #172033;
@@ -114,6 +107,11 @@ body.nwmd-app-body {
 
 .nwmd-home-landing {
     display: grid;
+    width: min(
+        100%,
+        var(--nwmd-page-shell-max-width)
+    );
+    margin-inline: auto;
     min-height: calc(100svh - 65px);
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -127,14 +125,14 @@ body.nwmd-app-body {
 }
 
 .nwmd-home-landing__visual {
-    padding: 0;
+    padding: 20px;
     background: #ffffff;
 }
 
 .nwmd-home-landing__visual img {
     display: block;
     width: min(100%, 680px);
-    max-height: calc(100svh - 70px);
+    max-height: calc(100svh - 110px);
     object-fit: contain;
 }
 
@@ -360,7 +358,7 @@ body.nwmd-app-body {
     }
 
     .nwmd-home-landing__visual {
-        padding: 0;
+        padding: 20px;
         background: #f0f4f9;
     }
 
@@ -427,5 +425,37 @@ body.nwmd-app-body {
     .nwmd-state-button,
     .nwmd-choice-button {
         transition: none;
+    }
+}
+/* Larger homepage state-button text. */
+.nwmd-state-button {
+    font-size: clamp(1.18rem, 1.7vw, 1.34rem);
+}
+
+.nwmd-state-button > span {
+    font-size: clamp(1.28rem, 1.9vw, 1.46rem);
+}
+/* Center landing header and extend split background. */
+@media (min-width: 761px) {
+    body.nwmd-app-body--landing,
+    body.nwmd-app-body--landing .nwmd-app-home {
+        background:
+            linear-gradient(
+                90deg,
+                #ffffff 0%,
+                #ffffff 50%,
+                #f0f4f9 50%,
+                #f0f4f9 100%
+            );
+    }
+
+    .nwmd-app-topbar--landing {
+        width: min(
+            100%,
+            var(--nwmd-page-shell-max-width)
+        );
+        margin-inline: auto;
+        padding: 8px 20px;
+        background: transparent;
     }
 }

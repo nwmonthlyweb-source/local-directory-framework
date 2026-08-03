@@ -22,6 +22,11 @@ $back_url = !empty($archive_url)
     ? $archive_url
     : home_url('/');
 
+$back_url =
+    nwmd_directory_get_requested_public_return_url(
+        $back_url
+    );
+
 $business_name = $business instanceof WP_Post
     ? sanitize_text_field(
         get_the_title($business->ID)
@@ -44,21 +49,8 @@ $business_name = $business instanceof WP_Post
 <body <?php body_class('nwmd-app-body nwmd-request-app-body'); ?>>
 <?php wp_body_open(); ?>
 
+<div class="nwmd-request-shell">
 <header class="nwmd-request-bar">
-    <a
-        class="nwmd-request-bar__back"
-        href="<?php echo esc_url($back_url); ?>"
-    >
-        <span aria-hidden="true">←</span>
-
-        <?php
-        echo esc_html__(
-            'Back',
-            'local-directory-framework'
-        );
-        ?>
-    </a>
-
     <a
         class="nwmd-request-bar__brand"
         href="<?php echo esc_url(home_url('/')); ?>"
@@ -118,6 +110,12 @@ $business_name = $business instanceof WP_Post
                         ? $business->ID
                         : 0
                 ); ?>"
+            >
+
+            <input
+                type="hidden"
+                name="return_to"
+                value="<?php echo esc_url($back_url); ?>"
             >
 
             <?php
@@ -353,6 +351,7 @@ $business_name = $business instanceof WP_Post
 
 <div class="nwmd-request-footer">
     <?php nwmd_directory_render_app_footer(false); ?>
+</div>
 </div>
 
 <?php wp_footer(); ?>

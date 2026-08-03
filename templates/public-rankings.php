@@ -4,8 +4,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-get_header();
-
 $period = nwmd_directory_get_current_published_ranking_period();
 $selection = nwmd_directory_get_public_ranking_selection();
 $step = nwmd_directory_get_public_ranking_step($selection);
@@ -94,6 +92,33 @@ $step_number = [
 
 $current_step_number = $step_number[$step] ?? 1;
 
+$back_url = home_url('/');
+
+if ('state' === $step) {
+    $back_url =
+        nwmd_directory_get_public_rankings_url();
+} elseif ('city' === $step) {
+    $back_url =
+        nwmd_directory_get_public_ranking_navigation_url(
+            $category_args
+        );
+} elseif ('specialty' === $step) {
+    $back_url =
+        nwmd_directory_get_public_ranking_navigation_url(
+            $state_args
+        );
+} elseif ('results' === $step) {
+    $back_url =
+        nwmd_directory_get_public_ranking_navigation_url(
+            $city_args
+        );
+}
+
+$back_url =
+    nwmd_directory_get_requested_public_return_url(
+        $back_url
+    );
+
 $progress_steps = [
     'category' => [
         'number' => 1,
@@ -140,11 +165,41 @@ if ('results' === $step) {
         : $specialty_term->name;
 }
 ?>
+<!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+    <meta charset="<?php bloginfo('charset'); ?>">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <?php wp_head(); ?>
+</head>
+
+<body <?php body_class('nwmd-app-body nwmd-rankings-app-body'); ?>>
+<?php wp_body_open(); ?>
 
 <main
     class="nwmd-directory nwmd-directory--rankings"
     id="primary"
 >
+    <header class="nwmd-rankings-bar">
+        <a
+            class="nwmd-rankings-bar__brand"
+            href="<?php echo esc_url(home_url('/')); ?>"
+        >
+            <span
+                class="nwmd-rankings-bar__mark"
+                aria-hidden="true"
+            >
+                NW
+            </span>
+
+            <span>NW Monthly</span>
+        </a>
+    </header>
     <section class="nwmd-directory__intro">
         <p class="nwmd-directory__eyebrow">
             <?php echo esc_html__('NW Monthly Rankings', 'local-directory-framework'); ?>
@@ -632,8 +687,12 @@ if ('results' === $step) {
                                 continue;
                             }
 
-                            $permalink = get_permalink(
-                                $business->ID
+                            $permalink = add_query_arg(
+                                [
+                                    'return_to' =>
+                                        nwmd_directory_get_current_public_url(),
+                                ],
+                                get_permalink($business->ID)
                             );
 
                             $excerpt = get_the_excerpt(
@@ -766,7 +825,9 @@ if ('results' === $step) {
             </a>
         </p>
     <?php endif; ?>
+    <?php nwmd_directory_render_app_footer(); ?>
 </main>
 
-<?php
-get_footer();
+<?php wp_footer(); ?>
+</body>
+</html>

@@ -167,27 +167,44 @@ if (!$city_term instanceof WP_Term) {
 }
 
 $manage_url =
-    nwmd_directory_get_business_request_url();
+    nwmd_directory_get_business_request_url(
+        [
+            'return_to' =>
+                nwmd_directory_get_current_public_url(),
+        ]
+    );
 
 $back_url = home_url('/');
 
-if (
-    $category_term instanceof WP_Term &&
-    $state_term instanceof WP_Term &&
-    $city_term instanceof WP_Term
-) {
-    $back_url = add_query_arg(
-        [
-            'nwmd_app_state' =>
-                $state_term->slug,
-            'nwmd_app_city' =>
-                $city_term->slug,
-            'nwmd_app_category' =>
-                $category_term->slug,
-        ],
-        home_url('/')
+if ($category_term instanceof WP_Term) {
+    $back_url = nwmd_directory_get_app_archive_url();
+}
+
+if ($specialty_selection_complete) {
+    $back_url = nwmd_directory_get_app_category_url(
+        $category_term->slug
     );
 }
+
+if ($state_term instanceof WP_Term) {
+    $back_url = nwmd_directory_get_app_specialty_url(
+        $category_term->slug,
+        $current_specialty
+    );
+}
+
+if ($city_term instanceof WP_Term) {
+    $back_url = nwmd_directory_get_app_state_url(
+        $category_term->slug,
+        $current_specialty,
+        $state_term->slug
+    );
+}
+
+$back_url =
+    nwmd_directory_get_requested_public_return_url(
+        $back_url
+    );
 
 $state_abbreviation = '';
 
@@ -255,19 +272,6 @@ if ($city_term instanceof WP_Term) {
 <main class="nwmd-app-shell" id="primary">
     <section class="nwmd-app-shell__panel">
         <header class="nwmd-app-bar">
-            <a
-                class="nwmd-app-bar__back"
-                href="<?php echo esc_url($back_url); ?>"
-            >
-                <span aria-hidden="true">←</span>
-                <?php
-                echo esc_html__(
-                    'Back',
-                    'local-directory-framework'
-                );
-                ?>
-            </a>
-
             <a
                 class="nwmd-app-bar__brand"
                 href="<?php echo esc_url(home_url('/')); ?>"
@@ -621,6 +625,8 @@ if ($city_term instanceof WP_Term) {
                                                     $state_term->slug,
                                                 'filter_city' =>
                                                     $city_term->slug,
+                                                'return_to' =>
+                                                    nwmd_directory_get_current_public_url(),
                                             ],
                                             get_permalink()
                                         )
@@ -700,6 +706,8 @@ if ($city_term instanceof WP_Term) {
                                                     $state_term->slug,
                                                 'filter_city' =>
                                                     $city_term->slug,
+                                                'return_to' =>
+                                                    nwmd_directory_get_current_public_url(),
                                             ],
                                             get_permalink()
                                         )

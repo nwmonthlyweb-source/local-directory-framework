@@ -122,18 +122,30 @@ $category_url = static function (
     );
 };
 
-$back_url = $home_url;
+$current_public_url =
+    nwmd_directory_get_current_public_url();
 
-if (is_array($selected_category)) {
-    $back_url = $city_url(
-        $selected_region['slug'],
-        $selected_city['slug']
+$results_url = static function (
+    $category_slug,
+    $specialty_slug,
+    $state_slug,
+    $city_slug
+) use ($current_public_url) {
+
+    return add_query_arg(
+        [
+            'return_to' => $current_public_url,
+        ],
+        nwmd_directory_get_app_city_url(
+            $category_slug,
+            $specialty_slug,
+            $state_slug,
+            $city_slug
+        )
     );
-} elseif (is_array($selected_city)) {
-    $back_url = $state_url(
-        $selected_region['slug']
-    );
-}
+};
+
+
 
 $landing_regions = $regions;
 
@@ -211,24 +223,6 @@ $hero_image = NWMD_DIRECTORY_URL
                     : '';
             ?>"
         >
-            <?php if (!$is_landing) : ?>
-                <a
-                    class="nwmd-app-back"
-                    href="<?php echo esc_url($back_url); ?>"
-                >
-                    <span aria-hidden="true">&larr;</span>
-
-                    <span>
-                        <?php
-                        echo esc_html__(
-                            'Back',
-                            'local-directory-framework'
-                        );
-                        ?>
-                    </span>
-                </a>
-            <?php endif; ?>
-
             <a
                 class="nwmd-app-brand"
                 href="<?php echo esc_url($home_url); ?>"
@@ -354,7 +348,7 @@ $hero_image = NWMD_DIRECTORY_URL
                 <h1>
                     <?php
                     echo esc_html__(
-                        'Choose your city',
+                        'Choose a city',
                         'local-directory-framework'
                     );
                     ?>
@@ -417,7 +411,7 @@ $hero_image = NWMD_DIRECTORY_URL
                 <h1>
                     <?php
                     echo esc_html__(
-                        'Choose a trade or category',
+                        'Choose a category',
                         'local-directory-framework'
                     );
                     ?>
@@ -501,7 +495,7 @@ $hero_image = NWMD_DIRECTORY_URL
                 <a
                     class="nwmd-choice-button"
                     href="<?php echo esc_url(
-                        nwmd_directory_get_app_city_url(
+                        $results_url(
                             $selected_category['slug'],
                             'all',
                             $selected_region['slug'],
@@ -527,7 +521,7 @@ $hero_image = NWMD_DIRECTORY_URL
                     <a
                         class="nwmd-choice-button"
                         href="<?php echo esc_url(
-                            nwmd_directory_get_app_city_url(
+                            $results_url(
                                 $selected_category['slug'],
                                 $specialty['slug'],
                                 $selected_region['slug'],

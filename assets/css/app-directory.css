@@ -34,7 +34,10 @@ body.nwmd-directory-app-body {
 }
 
 .nwmd-app-shell__panel {
-    width: min(760px, 100%);
+    width: min(
+        var(--nwmd-page-shell-max-width),
+        100%
+    );
     margin: 0 auto;
 }
 
@@ -42,28 +45,25 @@ body.nwmd-directory-app-body {
     display: flex;
     min-height: 50px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 16px;
     margin-bottom: 34px;
 }
 
-.nwmd-app-bar__back,
 .nwmd-app-bar__brand {
     display: inline-flex;
     align-items: center;
+    gap: 9px;
     color: #172033;
+    font-size: 0.94rem;
     font-weight: 800;
     text-decoration: none;
 }
 
-.nwmd-app-bar__back {
-    gap: 7px;
-    font-size: 0.94rem;
-}
-
-.nwmd-app-bar__brand {
-    gap: 9px;
-    font-size: 0.94rem;
+.nwmd-app-shell__panel > :not(.nwmd-app-bar) {
+    width: min(760px, 100%);
+    margin-right: auto;
+    margin-left: auto;
 }
 
 .nwmd-app-bar__mark {

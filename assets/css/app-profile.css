@@ -30,7 +30,10 @@ body.nwmd-profile-app-body {
 }
 
 .nwmd-profile-app__panel {
-    width: min(760px, 100%);
+    width: min(
+        var(--nwmd-page-shell-max-width),
+        100%
+    );
     margin: 0 auto;
 }
 
@@ -38,28 +41,25 @@ body.nwmd-profile-app-body {
     display: flex;
     min-height: 50px;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 16px;
     margin-bottom: 34px;
 }
 
-.nwmd-profile-bar__back,
 .nwmd-profile-bar__brand {
     display: inline-flex;
     align-items: center;
+    gap: 9px;
     color: #172033;
+    font-size: 0.94rem;
     font-weight: 800;
     text-decoration: none;
 }
 
-.nwmd-profile-bar__back {
-    gap: 7px;
-    font-size: 0.94rem;
-}
-
-.nwmd-profile-bar__brand {
-    gap: 9px;
-    font-size: 0.94rem;
+.nwmd-profile-app__panel > :not(.nwmd-profile-bar) {
+    width: min(760px, 100%);
+    margin-right: auto;
+    margin-left: auto;
 }
 
 .nwmd-profile-bar__mark {
