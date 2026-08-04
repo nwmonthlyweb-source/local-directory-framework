@@ -476,20 +476,31 @@ function nwmd_directory_render_operator_admin_page() {
             <p>
                 <?php
                 echo esc_html__(
-                    'These foundation controls update queue and run state only. They do not create or change business or Deal data.',
+                    'Use these controls to start, complete, or release one supervised operator item. Business drafts are created only through the separate reviewed draft action, and Deals or rankings are not changed.',
                     'local-directory-framework'
                 );
                 ?>
             </p>
 
-            <?php
-            nwmd_directory_render_operator_action_form(
-                'nwmd_directory_operator_run_next',
-                'nwmd_directory_operator_run_next',
-                __('Run Next Item', 'local-directory-framework'),
-                'button button-primary'
-            );
-            ?>
+            <?php if (empty($current) && 0 === $active_count) : ?>
+                <?php
+                nwmd_directory_render_operator_action_form(
+                    'nwmd_directory_operator_run_next',
+                    'nwmd_directory_operator_run_next',
+                    __('Run Next Item', 'local-directory-framework'),
+                    'button button-primary'
+                );
+                ?>
+            <?php else : ?>
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'Finish or release the current operator item before starting another one.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            <?php endif; ?>
 
             <?php if (!empty($current) && 1 === $active_count) : ?>
                 <?php

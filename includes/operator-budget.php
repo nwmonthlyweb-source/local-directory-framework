@@ -925,7 +925,7 @@ function nwmd_directory_render_operator_budget_section() {
         <p>
             <?php
             echo esc_html__(
-                'Paid research is not active yet. This version adds the usage ledger and hard limits before any paid request is allowed.',
+                'Paid research is limited to supervised preview runs. Usage is recorded in the ledger and blocked automatically when configured safeguards are exceeded.',
                 'local-directory-framework'
             );
             ?>

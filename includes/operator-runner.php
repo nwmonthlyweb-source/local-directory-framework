@@ -869,14 +869,13 @@ function nwmd_directory_prepare_operator_completion_summary(
 
     if (
         $review_count > 0
-        || $blocked_count > 0
-        || $ready_count !== $preview_count
-        || $run_count !== $preview_count
+        || ($ready_count + $blocked_count) !== $preview_count
+        || $run_count !== $ready_count
     ) {
         return new WP_Error(
             'nwmd_operator_completion_not_ready',
             __(
-                'Every researched business must pass duplicate review and exist as a supervised draft before completion.',
+                'Every possible match must be reviewed, and every non-duplicate business must exist as a supervised draft before completion.',
                 'local-directory-framework'
             )
         );

@@ -231,14 +231,19 @@ function nwmd_directory_build_operator_draft_items(
 
         $seen_slugs[$business_slug] = true;
 
-        if (
-            'ready_for_draft'
-            !== (string) ($decisions[$business_slug] ?? '')
-        ) {
+        $decision = sanitize_key(
+            (string) ($decisions[$business_slug] ?? '')
+        );
+
+        if ('blocked_duplicate' === $decision) {
+            continue;
+        }
+
+        if ('ready_for_draft' !== $decision) {
             return new WP_Error(
                 'nwmd_operator_draft_review_required',
                 __(
-                    'Every preview business must pass duplicate review before draft creation.',
+                    'Every possible duplicate must be reviewed before draft creation.',
                     'local-directory-framework'
                 )
             );
@@ -736,13 +741,12 @@ function nwmd_directory_create_operator_ready_business_drafts() {
 
             if (
                 absint($totals['review_required'] ?? 0) > 0
-                || absint($totals['blocked_duplicate'] ?? 0) > 0
                 || absint($totals['ready_for_draft'] ?? 0) < 1
             ) {
                 return new WP_Error(
                     'nwmd_operator_draft_duplicate_review_failed',
                     __(
-                        'The latest duplicate review does not allow draft creation.',
+                        'Possible duplicate matches must be resolved and at least one business must be ready before draft creation.',
                         'local-directory-framework'
                     )
                 );
@@ -1126,16 +1130,53 @@ function nwmd_directory_render_operator_draft_approval_section(
     $blocked = absint($totals['blocked_duplicate'] ?? 0);
     ?>
 
-    <?php if ($review > 0 || $blocked > 0 || $ready < 1) : ?>
+    <?php if ($review > 0) : ?>
         <p>
             <?php
             echo esc_html__(
-                'Draft creation is blocked until every preview business is ready for draft review.',
+                'Draft creation is blocked because one or more businesses have possible matches that require manual review.',
                 'local-directory-framework'
             );
             ?>
         </p>
         <?php return; ?>
+    <?php endif; ?>
+
+    <?php if ($ready < 1) : ?>
+        <p>
+            <?php
+            echo esc_html(
+                $blocked > 0
+                    ? __(
+                        'Every preview business is a confirmed duplicate. No Business drafts are needed, and the checkpoint may be completed.',
+                        'local-directory-framework'
+                    )
+                    : __(
+                        'The preview returned no businesses. No Business drafts are needed, and the checkpoint may be completed.',
+                        'local-directory-framework'
+                    )
+            );
+            ?>
+        </p>
+        <?php return; ?>
+    <?php endif; ?>
+
+    <?php if ($blocked > 0) : ?>
+        <p>
+            <?php
+            echo esc_html(
+                sprintf(
+                    _n(
+                        '%s confirmed duplicate will be skipped. Only the ready business will be created as a draft.',
+                        '%s confirmed duplicates will be skipped. Only the ready businesses will be created as drafts.',
+                        $blocked,
+                        'local-directory-framework'
+                    ),
+                    number_format_i18n($blocked)
+                )
+            );
+            ?>
+        </p>
     <?php endif; ?>
 
     <form

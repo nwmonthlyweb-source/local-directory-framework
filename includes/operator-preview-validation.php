@@ -1054,14 +1054,14 @@ function nwmd_directory_render_operator_preview_validation_section(
             <strong>
                 <?php
                 echo esc_html__(
-                    'No drafts were created.',
+                    'Duplicate review stored.',
                     'local-directory-framework'
                 );
                 ?>
             </strong>
             <?php
             echo esc_html__(
-                'Leave the checkpoint in progress. A later approval step will be required before any draft creation.',
+                'Continue to supervised Business draft creation below. Confirmed exact duplicates will be skipped, while possible matches remain blocked for review.',
                 'local-directory-framework'
             );
             ?>
