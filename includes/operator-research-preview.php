@@ -113,6 +113,18 @@ function nwmd_directory_get_operator_research_preview_result($run_id) {
         return [];
     }
 
+    $usage =
+        nwmd_directory_get_operator_research_preview_usage(
+            $run_id
+        );
+
+    if (
+        !is_object($usage)
+        || 'complete' !== sanitize_key((string) $usage->status)
+    ) {
+        return [];
+    }
+
     $tables = nwmd_directory_get_operator_table_names();
 
     $json = $wpdb->get_var(
