@@ -844,23 +844,64 @@ function nwmd_directory_record_operator_preview_usage_error(
 }
 
 /**
- * Reserve the current checkpoint for one supervised live preview.
+ * Reserve the current checkpoint for one controlled research preview.
+ *
+ * @param string $execution_mode Supervised or automated execution.
  *
  * @return array|WP_Error
  */
-function nwmd_directory_prepare_operator_research_preview() {
+function nwmd_directory_prepare_operator_research_preview(
+    $execution_mode = 'supervised'
+) {
+
+    $execution_mode = sanitize_key((string) $execution_mode);
+
+    if (
+        !in_array(
+            $execution_mode,
+            [
+                'supervised',
+                'automated',
+            ],
+            true
+        )
+    ) {
+        return new WP_Error(
+            'nwmd_operator_preview_mode_invalid',
+            __(
+                'The research preview execution mode is invalid.',
+                'local-directory-framework'
+            )
+        );
+    }
 
     return nwmd_directory_with_operator_lock(
-        function () {
+        function () use ($execution_mode) {
 
             $settings =
                 nwmd_directory_get_operator_budget_settings();
 
-            if (empty($settings['test_mode'])) {
+            if (
+                'supervised' === $execution_mode
+                && empty($settings['test_mode'])
+            ) {
                 return new WP_Error(
                     'nwmd_operator_preview_test_mode_required',
                     __(
-                        'Test mode must remain enabled for the live preview.',
+                        'Test mode must remain enabled for the supervised live preview.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            if (
+                'automated' === $execution_mode
+                && !empty($settings['test_mode'])
+            ) {
+                return new WP_Error(
+                    'nwmd_operator_preview_automation_test_mode_blocked',
+                    __(
+                        'Automated research is unavailable while supervised test mode is enabled.',
                         'local-directory-framework'
                     )
                 );
@@ -886,7 +927,7 @@ function nwmd_directory_prepare_operator_research_preview() {
                 return new WP_Error(
                     'nwmd_operator_preview_model_unsupported',
                     __(
-                        'The supervised preview currently requires gpt-5.6-terra.',
+                        'The controlled research preview currently requires gpt-5.6-terra.',
                         'local-directory-framework'
                     )
                 );
@@ -955,16 +996,22 @@ function nwmd_directory_prepare_operator_research_preview() {
 }
 
 /**
- * Execute one supervised live research preview.
+ * Execute one controlled research preview.
  *
  * No Business, source, Deal, ranking, or checkpoint record is created,
  * completed, or changed by this function.
  *
+ * @param string $execution_mode Supervised or automated execution.
+ *
  * @return array|WP_Error
  */
-function nwmd_directory_run_operator_research_preview() {
+function nwmd_directory_run_operator_research_preview(
+    $execution_mode = 'supervised'
+) {
 
-    $prepared = nwmd_directory_prepare_operator_research_preview();
+    $prepared = nwmd_directory_prepare_operator_research_preview(
+        $execution_mode
+    );
 
     if (is_wp_error($prepared)) {
         return $prepared;
