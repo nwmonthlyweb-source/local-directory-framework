@@ -220,6 +220,7 @@ function nwmd_directory_get_active_operator_checkpoint(
             specialties.id AS checkpoint_id,
             specialties.job_id,
             specialties.specialty_term_id,
+            specialties.businesses_created,
             jobs.state_term_id,
             jobs.city_term_id,
             jobs.category_term_id
@@ -361,7 +362,12 @@ function nwmd_directory_get_started_operator_run(
 
     $run = $wpdb->get_row(
         $wpdb->prepare(
-            "SELECT id, run_uuid
+            "SELECT
+                id,
+                run_uuid,
+                result_summary,
+                businesses_created,
+                businesses_without_deals
             FROM {$tables['runs']}
             WHERE job_id = %d
                 AND specialty_term_id = %d
@@ -747,10 +753,157 @@ function nwmd_directory_claim_next_operator_checkpoint() {
 }
 
 /**
- * Atomically complete the current specialty checkpoint.
+ * Validate the active run and prepare its preserved completion summary.
  *
- * This foundation action records completion only. It does not create or
- * update businesses, research sources, Deals, or rankings.
+ * Supervised runs with created Business drafts must retain valid JSON audit
+ * data, matching counters, and existing unpublished Business posts.
+ *
+ * @param object $checkpoint Active specialty checkpoint.
+ * @param object $run        Started operator run.
+ *
+ * @return string|WP_Error
+ */
+function nwmd_directory_prepare_operator_completion_summary(
+    $checkpoint,
+    $run
+) {
+
+    $checkpoint_count = absint(
+        $checkpoint->businesses_created ?? 0
+    );
+    $run_count = absint($run->businesses_created ?? 0);
+    $without_deals = absint(
+        $run->businesses_without_deals ?? 0
+    );
+
+    if (
+        $checkpoint_count !== $run_count
+        || $without_deals > $run_count
+    ) {
+        return new WP_Error(
+            'nwmd_operator_completion_counter_mismatch',
+            __(
+                'The operator counters do not match and the checkpoint cannot be completed safely.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $raw_summary = isset($run->result_summary)
+        ? (string) $run->result_summary
+        : '';
+
+    $summary = json_decode($raw_summary, true);
+
+    if ($run_count > 0) {
+        if (!is_array($summary)) {
+            return new WP_Error(
+                'nwmd_operator_completion_audit_missing',
+                __(
+                    'The supervised run audit record is missing or invalid.',
+                    'local-directory-framework'
+                )
+            );
+        }
+
+        $draft_creation = isset($summary['draft_creation'])
+            && is_array($summary['draft_creation'])
+            ? $summary['draft_creation']
+            : [];
+
+        $draft_count = absint(
+            $draft_creation['business_count'] ?? 0
+        );
+
+        $post_ids = isset(
+            $draft_creation['business_post_ids']
+        ) && is_array(
+            $draft_creation['business_post_ids']
+        )
+            ? array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            'absint',
+                            $draft_creation[
+                                'business_post_ids'
+                            ]
+                        )
+                    )
+                )
+            )
+            : [];
+
+        if (
+            'created' !== (
+                (string) ($draft_creation['status'] ?? '')
+            )
+            || $draft_count !== $run_count
+            || count($post_ids) !== $run_count
+        ) {
+            return new WP_Error(
+                'nwmd_operator_completion_draft_audit_invalid',
+                __(
+                    'The supervised Business draft audit does not match the operator counters.',
+                    'local-directory-framework'
+                )
+            );
+        }
+
+        foreach ($post_ids as $post_id) {
+            $post = get_post($post_id);
+
+            if (
+                !$post instanceof WP_Post
+                || 'nwmd_business' !== $post->post_type
+                || 'draft' !== $post->post_status
+            ) {
+                return new WP_Error(
+                    'nwmd_operator_completion_draft_missing',
+                    __(
+                        'Every supervised Business record must still exist as an unpublished draft before completion.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+        }
+    }
+
+    if (!is_array($summary)) {
+        return $raw_summary;
+    }
+
+    $summary['completion'] = [
+        'completion_version'       => 1,
+        'status'                   => 'complete',
+        'completed_at'             => current_time('mysql'),
+        'completed_by'             => get_current_user_id(),
+        'businesses_created'       => $run_count,
+        'businesses_without_deals' => $without_deals,
+    ];
+
+    $encoded = wp_json_encode(
+        $summary,
+        JSON_UNESCAPED_SLASHES
+    );
+
+    if (!is_string($encoded) || '' === $encoded) {
+        return new WP_Error(
+            'nwmd_operator_completion_summary_encode_failed',
+            __(
+                'The preserved operator audit record could not be encoded.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    return $encoded;
+}
+/**
+ * Atomically complete the current operator checkpoint.
+ *
+ * This action preserves the stored run audit summary and validates any
+ * supervised Business drafts before completion.
  *
  * @return array|WP_Error
  */
@@ -827,6 +980,18 @@ function nwmd_directory_complete_current_operator_checkpoint() {
                 );
             }
 
+            $completion_summary =
+                nwmd_directory_prepare_operator_completion_summary(
+                    $checkpoint,
+                    $run
+                );
+
+            if (is_wp_error($completion_summary)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return $completion_summary;
+            }
+
             $checkpoint_updated = $wpdb->update(
                 $tables['specialties'],
                 [
@@ -867,10 +1032,7 @@ function nwmd_directory_complete_current_operator_checkpoint() {
                 $tables['runs'],
                 [
                     'status'         => 'complete',
-                    'result_summary' => __(
-                        'Checkpoint completed. No business or Deal data was changed.',
-                        'local-directory-framework'
-                    ),
+                    'result_summary' => $completion_summary,
                     'error_message'  => '',
                     'completed_at'   => $now,
                     'updated_at'     => $now,

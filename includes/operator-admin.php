@@ -499,7 +499,7 @@ function nwmd_directory_render_operator_admin_page() {
                     __('Complete Current Item', 'local-directory-framework'),
                     'button button-secondary',
                     __(
-                        'Complete this checkpoint without creating business or Deal data?',
+                        'Complete this reviewed checkpoint and preserve its stored audit record?',
                         'local-directory-framework'
                     )
                 );
