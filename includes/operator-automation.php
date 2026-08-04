@@ -812,11 +812,12 @@ function nwmd_directory_run_operator_automation_research() {
 }
 
 /**
- * Record one no-cost scheduler heartbeat.
+ * Execute one controlled automation heartbeat.
  *
- * This function does not claim queue records, call OpenAI, reserve
- * budget, create drafts, publish records, create Deals, change
- * rankings, or complete checkpoints.
+ * When automation is enabled and supervised test mode is disabled, this
+ * function may claim or resume one checkpoint, reserve guarded budget, and
+ * contact OpenAI once. It does not create Business drafts, publish records,
+ * create Deals, change rankings, or complete the checkpoint.
  */
 function nwmd_directory_handle_operator_automation_heartbeat() {
 
@@ -834,59 +835,54 @@ function nwmd_directory_handle_operator_automation_heartbeat() {
         return;
     }
 
-    $now  = current_time('mysql');
-    $plan =
-        nwmd_directory_get_operator_automation_research_plan();
+    $now    = current_time('mysql');
+    $result =
+        nwmd_directory_run_operator_automation_research();
 
-    if (is_wp_error($plan)) {
+    if (is_wp_error($result)) {
+        $context = function_exists(
+            'nwmd_directory_get_current_operator_checkpoint_context'
+        )
+            ? nwmd_directory_get_current_operator_checkpoint_context()
+            : [];
+
+        $status = [
+            'last_attempt_at' => $now,
+            'last_error_at'   => $now,
+            'last_result'     => __(
+                'Automated research stopped safely.',
+                'local-directory-framework'
+            ),
+            'last_error'      =>
+                $result->get_error_message(),
+        ];
+
+        $run_id = absint($context['run_id'] ?? 0);
+
+        if ($run_id > 0) {
+            $status['last_run_id'] = $run_id;
+        }
+
         nwmd_directory_update_operator_automation_status(
-            [
-                'last_attempt_at' => $now,
-                'last_error_at'   => $now,
-                'last_result'     => __(
-                    'Automation planning stopped safely.',
-                    'local-directory-framework'
-                ),
-                'last_error'      =>
-                    $plan->get_error_message(),
-            ]
+            $status
         );
 
         return;
     }
 
-    $action = sanitize_key(
-        (string) ($plan['action'] ?? '')
-    );
+    $run_id = absint($result['run_id'] ?? 0);
 
-    $messages = [
-        'awaiting_review'     => __(
-            'The active research preview is awaiting supervised review.',
-            'local-directory-framework'
-        ),
-        'resume_and_research' => __(
-            'The active checkpoint is eligible for controlled automated research.',
-            'local-directory-framework'
-        ),
-        'claim_and_research'  => __(
-            'The next pending checkpoint is eligible for controlled automated research.',
-            'local-directory-framework'
-        ),
-    ];
-
-    if (!isset($messages[$action])) {
+    if (empty($result['research_performed'])) {
         nwmd_directory_update_operator_automation_status(
             [
                 'last_attempt_at' => $now,
-                'last_error_at'   => $now,
+                'last_error_at'   => '',
                 'last_result'     => __(
-                    'Automation planning stopped safely.',
+                    'The active research preview is awaiting supervised review.',
                     'local-directory-framework'
                 ),
-                'last_error'      => __(
-                    'The automation planner returned an unsupported action.',
-                    'local-directory-framework'
-                ),
+                'last_error'      => '',
+                'last_run_id'     => $run_id,
             ]
         );
 
@@ -896,12 +892,19 @@ function nwmd_directory_handle_operator_automation_heartbeat() {
     nwmd_directory_update_operator_automation_status(
         [
             'last_attempt_at' => $now,
+            'last_success_at' => $now,
             'last_error_at'   => '',
-            'last_result'     => $messages[$action],
-            'last_error'      => '',
-            'last_run_id'     => absint(
-                $plan['run_id'] ?? 0
+            'last_result'     => sprintf(
+                /* translators: 1: Run ID, 2: candidate business count. */
+                __(
+                    'Automated research completed for run #%1$d with %2$d candidate businesses. Supervised review is required.',
+                    'local-directory-framework'
+                ),
+                $run_id,
+                absint($result['business_count'] ?? 0)
             ),
+            'last_error'      => '',
+            'last_run_id'     => $run_id,
         ]
     );
 }
