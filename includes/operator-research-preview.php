@@ -682,6 +682,8 @@ function nwmd_directory_save_operator_research_preview(
  *
  * @param int    $run_id  Operator run ID.
  * @param string $message Safe error message.
+ *
+ * @return true|WP_Error
  */
 function nwmd_directory_save_operator_research_preview_error(
     $run_id,
@@ -690,17 +692,30 @@ function nwmd_directory_save_operator_research_preview_error(
 
     global $wpdb;
 
-    $tables = nwmd_directory_get_operator_table_names();
+    $run_id = absint($run_id);
+    $message = sanitize_textarea_field((string) $message);
 
-    $wpdb->update(
+    if ($run_id < 1 || '' === trim($message)) {
+        return new WP_Error(
+            'nwmd_operator_preview_error_audit_invalid',
+            __(
+                'The research preview error audit could not be saved.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $tables = nwmd_directory_get_operator_table_names();
+    $now    = current_time('mysql');
+
+    $updated = $wpdb->update(
         $tables['runs'],
         [
-            'error_message' =>
-                sanitize_textarea_field($message),
-            'updated_at'    => current_time('mysql'),
+            'error_message' => $message,
+            'updated_at'    => $now,
         ],
         [
-            'id'     => absint($run_id),
+            'id'     => $run_id,
             'status' => 'started',
         ],
         [
@@ -711,6 +726,73 @@ function nwmd_directory_save_operator_research_preview_error(
             '%d',
             '%s',
         ]
+    );
+
+    if (false === $updated) {
+        return new WP_Error(
+            'nwmd_operator_preview_error_audit_failed',
+            __(
+                'The active operator run could not store the research preview error audit safely.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if (0 === $updated) {
+        $current = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT status, error_message
+                FROM {$tables['runs']}
+                WHERE id = %d
+                LIMIT 1",
+                $run_id
+            )
+        );
+
+        if (
+            !is_object($current)
+            || 'started' !== (string) $current->status
+            || $message !== (string) $current->error_message
+        ) {
+            return new WP_Error(
+                'nwmd_operator_preview_error_audit_failed',
+                __(
+                    'The active operator run could not store the research preview error audit safely.',
+                    'local-directory-framework'
+                )
+            );
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Log a secondary preview error-audit failure.
+ *
+ * The original request, parsing, or validation error remains primary.
+ *
+ * @param int           $run_id Operator run ID.
+ * @param true|WP_Error $saved  Error-audit save result.
+ *
+ * @return void
+ */
+function nwmd_directory_log_operator_preview_error_audit_failure(
+    $run_id,
+    $saved
+) {
+
+    if (!is_wp_error($saved)) {
+        return;
+    }
+
+    error_log(
+        sprintf(
+            'NW Monthly Data Operator preview error audit save failed '
+                . 'for run %d: %s',
+            absint($run_id),
+            $saved->get_error_message()
+        )
     );
 }
 
@@ -932,9 +1014,15 @@ function nwmd_directory_run_operator_research_preview() {
             ]
         );
 
-        nwmd_directory_save_operator_research_preview_error(
+        $audit_saved =
+            nwmd_directory_save_operator_research_preview_error(
+                $run_id,
+                $message
+            );
+
+        nwmd_directory_log_operator_preview_error_audit_failure(
             $run_id,
-            $message
+            $audit_saved
         );
 
         return new WP_Error(
@@ -964,9 +1052,15 @@ function nwmd_directory_run_operator_research_preview() {
             ]
         );
 
-        nwmd_directory_save_operator_research_preview_error(
+        $audit_saved =
+            nwmd_directory_save_operator_research_preview_error(
+                $run_id,
+                $message
+            );
+
+        nwmd_directory_log_operator_preview_error_audit_failure(
             $run_id,
-            $message
+            $audit_saved
         );
 
         return new WP_Error(
@@ -1044,9 +1138,15 @@ function nwmd_directory_run_operator_research_preview() {
             ]
         );
 
-        nwmd_directory_save_operator_research_preview_error(
+        $audit_saved =
+            nwmd_directory_save_operator_research_preview_error(
+                $run_id,
+                $message
+            );
+
+        nwmd_directory_log_operator_preview_error_audit_failure(
             $run_id,
-            $message
+            $audit_saved
         );
 
         return new WP_Error(
@@ -1080,9 +1180,15 @@ function nwmd_directory_run_operator_research_preview() {
             ]
         );
 
-        nwmd_directory_save_operator_research_preview_error(
+        $audit_saved =
+            nwmd_directory_save_operator_research_preview_error(
+                $run_id,
+                $output_text->get_error_message()
+            );
+
+        nwmd_directory_log_operator_preview_error_audit_failure(
             $run_id,
-            $output_text->get_error_message()
+            $audit_saved
         );
 
         return $output_text;
@@ -1116,9 +1222,15 @@ function nwmd_directory_run_operator_research_preview() {
             ]
         );
 
-        nwmd_directory_save_operator_research_preview_error(
+        $audit_saved =
+            nwmd_directory_save_operator_research_preview_error(
+                $run_id,
+                $preview->get_error_message()
+            );
+
+        nwmd_directory_log_operator_preview_error_audit_failure(
             $run_id,
-            $preview->get_error_message()
+            $audit_saved
         );
 
         return $preview;
