@@ -22,6 +22,9 @@ function nwmd_directory_install_schema() {
     $rankings_table       = $wpdb->prefix . 'nwmd_ranking_entries';
     $requests_table       = $wpdb->prefix . 'nwmd_business_requests';
     $ads_table            = $wpdb->prefix . 'nwmd_ads';
+    $operator_jobs_table        = $wpdb->prefix . 'nwmd_operator_jobs';
+    $operator_specialties_table = $wpdb->prefix . 'nwmd_operator_specialties';
+    $operator_runs_table        = $wpdb->prefix . 'nwmd_operator_runs';
 
     $queries = [];
 
@@ -203,6 +206,85 @@ function nwmd_directory_install_schema() {
         KEY specialty_term_id (specialty_term_id)
     ) {$charset_collate};";
 
+    $queries[] = "CREATE TABLE {$operator_jobs_table} (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        job_key varchar(191) NOT NULL,
+        state_term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+        city_term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+        category_term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+        status varchar(40) NOT NULL DEFAULT 'pending',
+        current_specialty_term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+        specialty_total smallint(5) unsigned NOT NULL DEFAULT 0,
+        specialty_completed smallint(5) unsigned NOT NULL DEFAULT 0,
+        businesses_created int(10) unsigned NOT NULL DEFAULT 0,
+        businesses_updated int(10) unsigned NOT NULL DEFAULT 0,
+        deals_created int(10) unsigned NOT NULL DEFAULT 0,
+        deals_updated int(10) unsigned NOT NULL DEFAULT 0,
+        last_error longtext NOT NULL,
+        started_at datetime DEFAULT NULL,
+        completed_at datetime DEFAULT NULL,
+        last_run_at datetime DEFAULT NULL,
+        created_at datetime NOT NULL,
+        updated_at datetime NOT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY job_key (job_key),
+        UNIQUE KEY location_category (state_term_id, city_term_id, category_term_id),
+        KEY status (status),
+        KEY current_specialty_term_id (current_specialty_term_id),
+        KEY last_run_at (last_run_at)
+    ) {$charset_collate};";
+
+    $queries[] = "CREATE TABLE {$operator_specialties_table} (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        job_id bigint(20) unsigned NOT NULL,
+        specialty_term_id bigint(20) unsigned NOT NULL,
+        sort_order smallint(5) unsigned NOT NULL DEFAULT 0,
+        status varchar(40) NOT NULL DEFAULT 'pending',
+        businesses_created int(10) unsigned NOT NULL DEFAULT 0,
+        businesses_updated int(10) unsigned NOT NULL DEFAULT 0,
+        businesses_without_deals int(10) unsigned NOT NULL DEFAULT 0,
+        deals_created int(10) unsigned NOT NULL DEFAULT 0,
+        deals_updated int(10) unsigned NOT NULL DEFAULT 0,
+        exclusions int(10) unsigned NOT NULL DEFAULT 0,
+        last_error longtext NOT NULL,
+        started_at datetime DEFAULT NULL,
+        completed_at datetime DEFAULT NULL,
+        created_at datetime NOT NULL,
+        updated_at datetime NOT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY job_specialty (job_id, specialty_term_id),
+        KEY job_id (job_id),
+        KEY specialty_term_id (specialty_term_id),
+        KEY status (status),
+        KEY sort_order (sort_order)
+    ) {$charset_collate};";
+
+    $queries[] = "CREATE TABLE {$operator_runs_table} (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        run_uuid char(36) NOT NULL,
+        job_id bigint(20) unsigned NOT NULL DEFAULT 0,
+        specialty_term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+        status varchar(40) NOT NULL DEFAULT 'started',
+        businesses_created int(10) unsigned NOT NULL DEFAULT 0,
+        businesses_updated int(10) unsigned NOT NULL DEFAULT 0,
+        businesses_without_deals int(10) unsigned NOT NULL DEFAULT 0,
+        deals_created int(10) unsigned NOT NULL DEFAULT 0,
+        deals_updated int(10) unsigned NOT NULL DEFAULT 0,
+        exclusions int(10) unsigned NOT NULL DEFAULT 0,
+        result_summary longtext NOT NULL,
+        error_message longtext NOT NULL,
+        created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+        started_at datetime DEFAULT NULL,
+        completed_at datetime DEFAULT NULL,
+        created_at datetime NOT NULL,
+        updated_at datetime NOT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY run_uuid (run_uuid),
+        KEY job_id (job_id),
+        KEY specialty_term_id (specialty_term_id),
+        KEY status (status),
+        KEY started_at (started_at)
+    ) {$charset_collate};";
     foreach ($queries as $query) {
         dbDelta($query);
     }
