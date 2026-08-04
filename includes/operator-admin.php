@@ -155,7 +155,7 @@ function nwmd_directory_render_operator_run_notice() {
             <?php
             echo esc_html(
                 sprintf(
-                    '%1$s â€” %2$s â€” %3$s â€” %4$s',
+                    '%1$s | %2$s | %3$s | %4$s',
                     (string) ($result['state_name'] ?? ''),
                     (string) ($result['city_name'] ?? ''),
                     (string) ($result['category_name'] ?? ''),
