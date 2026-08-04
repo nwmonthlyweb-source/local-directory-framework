@@ -769,12 +769,35 @@ function nwmd_directory_run_operator_automation_research() {
         );
     }
 
+    $checkpoint_action = sanitize_key(
+        (string) (
+            $context['action']
+                ?? (
+                    'claim_and_research' === $action
+                        ? 'started'
+                        : 'resumed'
+                )
+        )
+    );
+
     $result =
         nwmd_directory_run_operator_research_preview(
             'automated'
         );
 
     if (is_wp_error($result)) {
+        if (
+            'nwmd_operator_preview_already_exists'
+            === $result->get_error_code()
+        ) {
+            return [
+                'action'             => 'awaiting_review',
+                'research_performed' => false,
+                'run_id'             => $run_id,
+                'checkpoint_action'  => $checkpoint_action,
+            ];
+        }
+
         return $result;
     }
 
@@ -783,17 +806,7 @@ function nwmd_directory_run_operator_automation_research() {
         [
             'research_performed' => true,
             'run_id'             => $run_id,
-            'checkpoint_action'  =>
-                sanitize_key(
-                    (string) (
-                        $context['action']
-                            ?? (
-                                'claim_and_research' === $action
-                                    ? 'started'
-                                    : 'resumed'
-                            )
-                    )
-                ),
+            'checkpoint_action'  => $checkpoint_action,
         ]
     );
 }
