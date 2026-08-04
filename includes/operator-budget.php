@@ -457,6 +457,19 @@ function nwmd_directory_can_reserve_operator_usage(
         );
     }
 
+    if (
+        nwmd_directory_get_stale_operator_usage_count(15)
+        > 0
+    ) {
+        return new WP_Error(
+            'nwmd_operator_stale_usage_blocked',
+            __(
+                'A previous research preview has remained in progress for more than 15 minutes. Review the stale usage warning before starting another paid request.',
+                'local-directory-framework'
+            )
+        );
+    }
+
     $per_run_limit_micros =
         nwmd_directory_operator_cents_to_micros(
             $settings['per_run_budget_cents']
