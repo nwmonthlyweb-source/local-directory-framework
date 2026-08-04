@@ -438,6 +438,15 @@ function nwmd_directory_render_operator_admin_page() {
                 </table>
             <?php endif; ?>
 
+            <?php
+            if (
+                function_exists(
+                    'nwmd_directory_render_openai_operator_section'
+                )
+            ) {
+                nwmd_directory_render_openai_operator_section();
+            }
+            ?>
             <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
             <p>
