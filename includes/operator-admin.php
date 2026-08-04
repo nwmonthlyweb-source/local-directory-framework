@@ -26,6 +26,157 @@ add_action(
 );
 
 /**
+ * Render the latest queue seeding notice.
+ */
+function nwmd_directory_render_operator_seed_notice() {
+
+    if (
+        !isset($_GET['seeded']) ||
+        '1' !== sanitize_text_field(wp_unslash($_GET['seeded']))
+    ) {
+        return;
+    }
+
+    $notice_key = 'nwmd_operator_seed_' . get_current_user_id();
+    $notice     = get_transient($notice_key);
+
+    delete_transient($notice_key);
+
+    if (!is_array($notice)) {
+        return;
+    }
+
+    if (empty($notice['success'])) {
+        ?>
+        <div class="notice notice-error">
+            <p>
+                <?php
+                echo esc_html(
+                    (string) (
+                        $notice['message']
+                        ?? __(
+                            'The queue could not be refreshed.',
+                            'local-directory-framework'
+                        )
+                    )
+                );
+                ?>
+            </p>
+        </div>
+        <?php
+
+        return;
+    }
+
+    $result = isset($notice['result'])
+        && is_array($notice['result'])
+        ? $notice['result']
+        : [];
+
+    ?>
+    <div class="notice notice-success is-dismissible">
+        <p>
+            <?php
+            echo esc_html(
+                sprintf(
+                    __(
+                        'Queue refreshed. Added %1$d jobs and %2$d specialty checkpoints. Reviewed %3$d jobs and %4$d checkpoints. Skipped %5$d cities without a valid state link.',
+                        'local-directory-framework'
+                    ),
+                    absint($result['jobs_created'] ?? 0),
+                    absint($result['specialties_created'] ?? 0),
+                    absint($result['jobs_seen'] ?? 0),
+                    absint($result['specialties_seen'] ?? 0),
+                    absint($result['cities_skipped'] ?? 0)
+                )
+            );
+            ?>
+        </p>
+    </div>
+    <?php
+}
+
+/**
+ * Render the latest Run Next Item notice.
+ */
+function nwmd_directory_render_operator_run_notice() {
+
+    if (
+        !isset($_GET['ran_next']) ||
+        '1' !== sanitize_text_field(wp_unslash($_GET['ran_next']))
+    ) {
+        return;
+    }
+
+    $notice_key = 'nwmd_operator_run_' . get_current_user_id();
+    $notice     = get_transient($notice_key);
+
+    delete_transient($notice_key);
+
+    if (!is_array($notice)) {
+        return;
+    }
+
+    if (empty($notice['success'])) {
+        ?>
+        <div class="notice notice-error">
+            <p>
+                <?php
+                echo esc_html(
+                    (string) (
+                        $notice['message']
+                        ?? __(
+                            'The next queue item could not be started.',
+                            'local-directory-framework'
+                        )
+                    )
+                );
+                ?>
+            </p>
+        </div>
+        <?php
+
+        return;
+    }
+
+    $result = isset($notice['result'])
+        && is_array($notice['result'])
+        ? $notice['result']
+        : [];
+
+    $action = !empty($result['resumed'])
+        ? __('Resumed', 'local-directory-framework')
+        : __('Started', 'local-directory-framework');
+
+    ?>
+    <div class="notice notice-success is-dismissible">
+        <p>
+            <strong><?php echo esc_html($action); ?>:</strong>
+            <?php
+            echo esc_html(
+                sprintf(
+                    '%1$s â€” %2$s â€” %3$s â€” %4$s',
+                    (string) ($result['state_name'] ?? ''),
+                    (string) ($result['city_name'] ?? ''),
+                    (string) ($result['category_name'] ?? ''),
+                    (string) ($result['specialty_name'] ?? '')
+                )
+            );
+            ?>
+        </p>
+        <p>
+            <?php
+            echo esc_html__(
+                'The checkpoint and run were recorded. No business or Deal data was changed.',
+                'local-directory-framework'
+            );
+            ?>
+        </p>
+    </div>
+    <?php
+}
+
+/**
  * Render the Data Operator storage and queue page.
  */
 function nwmd_directory_render_operator_admin_page() {
@@ -44,16 +195,11 @@ function nwmd_directory_render_operator_admin_page() {
         ? $status['counts']
         : [];
 
-    $seed_notice = null;
-
-    if (
-        isset($_GET['seeded']) &&
-        '1' === sanitize_text_field(wp_unslash($_GET['seeded']))
-    ) {
-        $notice_key  = 'nwmd_operator_seed_' . get_current_user_id();
-        $seed_notice = get_transient($notice_key);
-        delete_transient($notice_key);
-    }
+    $checkpoint_counts = function_exists(
+        'nwmd_directory_get_operator_checkpoint_counts'
+    )
+        ? nwmd_directory_get_operator_checkpoint_counts()
+        : [];
 
     ?>
     <div class="wrap">
@@ -65,6 +211,9 @@ function nwmd_directory_render_operator_admin_page() {
             );
             ?>
         </h1>
+
+        <?php nwmd_directory_render_operator_seed_notice(); ?>
+        <?php nwmd_directory_render_operator_run_notice(); ?>
 
         <?php if (!empty($status['ready'])) : ?>
             <div class="notice notice-success inline">
@@ -90,62 +239,7 @@ function nwmd_directory_render_operator_admin_page() {
             </div>
         <?php endif; ?>
 
-        <?php if (is_array($seed_notice)) : ?>
-            <?php if (!empty($seed_notice['success'])) : ?>
-                <?php
-                $seed_result = isset($seed_notice['result'])
-                    && is_array($seed_notice['result'])
-                    ? $seed_notice['result']
-                    : [];
-                ?>
-                <div class="notice notice-success is-dismissible">
-                    <p>
-                        <?php
-                        echo esc_html(
-                            sprintf(
-                                __(
-                                    'Queue refreshed. Added %1$d jobs and %2$d specialty checkpoints. Reviewed %3$d jobs and %4$d checkpoints. Skipped %5$d cities without a valid state link.',
-                                    'local-directory-framework'
-                                ),
-                                absint($seed_result['jobs_created'] ?? 0),
-                                absint(
-                                    $seed_result['specialties_created']
-                                    ?? 0
-                                ),
-                                absint($seed_result['jobs_seen'] ?? 0),
-                                absint(
-                                    $seed_result['specialties_seen']
-                                    ?? 0
-                                ),
-                                absint(
-                                    $seed_result['cities_skipped']
-                                    ?? 0
-                                )
-                            )
-                        );
-                        ?>
-                    </p>
-                </div>
-            <?php else : ?>
-                <div class="notice notice-error">
-                    <p>
-                        <?php
-                        echo esc_html(
-                            (string) (
-                                $seed_notice['message']
-                                ?? __(
-                                    'The queue could not be refreshed.',
-                                    'local-directory-framework'
-                                )
-                            )
-                        );
-                        ?>
-                    </p>
-                </div>
-            <?php endif; ?>
-        <?php endif; ?>
-
-        <table class="widefat striped" style="max-width: 720px;">
+        <table class="widefat striped" style="max-width: 760px;">
             <thead>
                 <tr>
                     <th scope="col">
@@ -176,13 +270,7 @@ function nwmd_directory_render_operator_admin_page() {
                         );
                         ?>
                     </td>
-                    <td>
-                        <?php
-                        echo esc_html(
-                            (string) ($counts['jobs'] ?? 0)
-                        );
-                        ?>
-                    </td>
+                    <td><?php echo esc_html((string) ($counts['jobs'] ?? 0)); ?></td>
                 </tr>
                 <tr>
                     <td>
@@ -193,13 +281,7 @@ function nwmd_directory_render_operator_admin_page() {
                         );
                         ?>
                     </td>
-                    <td>
-                        <?php
-                        echo esc_html(
-                            (string) ($counts['specialties'] ?? 0)
-                        );
-                        ?>
-                    </td>
+                    <td><?php echo esc_html((string) ($counts['specialties'] ?? 0)); ?></td>
                 </tr>
                 <tr>
                     <td>
@@ -210,18 +292,89 @@ function nwmd_directory_render_operator_admin_page() {
                         );
                         ?>
                     </td>
-                    <td>
-                        <?php
-                        echo esc_html(
-                            (string) ($counts['runs'] ?? 0)
-                        );
-                        ?>
-                    </td>
+                    <td><?php echo esc_html((string) ($counts['runs'] ?? 0)); ?></td>
                 </tr>
             </tbody>
         </table>
 
         <?php if (!empty($status['ready'])) : ?>
+            <h2>
+                <?php
+                echo esc_html__(
+                    'Queue progress',
+                    'local-directory-framework'
+                );
+                ?>
+            </h2>
+
+            <table class="widefat striped" style="max-width: 760px;">
+                <thead>
+                    <tr>
+                        <th scope="col">
+                            <?php echo esc_html__('Status', 'local-directory-framework'); ?>
+                        </th>
+                        <th scope="col">
+                            <?php echo esc_html__('Checkpoints', 'local-directory-framework'); ?>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?php echo esc_html__('Pending', 'local-directory-framework'); ?></td>
+                        <td><?php echo esc_html((string) ($checkpoint_counts['pending'] ?? 0)); ?></td>
+                    </tr>
+                    <tr>
+                        <td><?php echo esc_html__('In progress', 'local-directory-framework'); ?></td>
+                        <td><?php echo esc_html((string) ($checkpoint_counts['in_progress'] ?? 0)); ?></td>
+                    </tr>
+                    <tr>
+                        <td><?php echo esc_html__('Complete', 'local-directory-framework'); ?></td>
+                        <td><?php echo esc_html((string) ($checkpoint_counts['complete'] ?? 0)); ?></td>
+                    </tr>
+                    <tr>
+                        <td><?php echo esc_html__('Error', 'local-directory-framework'); ?></td>
+                        <td><?php echo esc_html((string) ($checkpoint_counts['error'] ?? 0)); ?></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>
+                <?php
+                echo esc_html__(
+                    'Run operator',
+                    'local-directory-framework'
+                );
+                ?>
+            </h2>
+
+            <p>
+                <?php
+                echo esc_html__(
+                    'Safely claim or resume one queue item and create its run record. This foundation step does not change business or Deal data.',
+                    'local-directory-framework'
+                );
+                ?>
+            </p>
+
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input
+                    type="hidden"
+                    name="action"
+                    value="nwmd_directory_operator_run_next"
+                >
+                <?php
+                wp_nonce_field(
+                    'nwmd_directory_operator_run_next'
+                );
+                submit_button(
+                    __('Run Next Item', 'local-directory-framework'),
+                    'primary',
+                    'submit',
+                    false
+                );
+                ?>
+            </form>
+
             <h2>
                 <?php
                 echo esc_html__(
@@ -251,11 +404,8 @@ function nwmd_directory_render_operator_admin_page() {
                     'nwmd_directory_seed_operator_queue'
                 );
                 submit_button(
-                    __(
-                        'Seed or Refresh Queue',
-                        'local-directory-framework'
-                    ),
-                    'primary',
+                    __('Seed or Refresh Queue', 'local-directory-framework'),
+                    'secondary',
                     'submit',
                     false
                 );
