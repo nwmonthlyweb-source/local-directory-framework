@@ -1483,25 +1483,6 @@ function nwmd_directory_render_operator_automation_section() {
         ?>
     </h2>
 
-    <div class="notice notice-info inline">
-        <p>
-            <strong>
-                <?php
-                echo esc_html__(
-                    'Scheduler foundation only.',
-                    'local-directory-framework'
-                );
-                ?>
-            </strong>
-            <?php
-            echo esc_html__(
-                'A no-cost weekly heartbeat scheduler is installed. It does not contact OpenAI, spend budget, claim a checkpoint, create drafts, publish records, create Deals, change rankings, or complete checkpoints.',
-                'local-directory-framework'
-            );
-            ?>
-        </p>
-    </div>
-
     <?php if (!empty($budget['test_mode'])) : ?>
         <div class="notice notice-warning inline">
             <p>
@@ -1692,7 +1673,7 @@ function nwmd_directory_render_operator_automation_section() {
                 <td>
                     <?php
                     echo esc_html__(
-                        'Installed: no-cost heartbeat only',
+                        'Installed: guarded weekly research',
                         'local-directory-framework'
                     );
                     ?>
@@ -1910,7 +1891,7 @@ function nwmd_directory_render_operator_automation_section() {
                             >
                             <?php
                             echo esc_html__(
-                                'Schedule one no-cost controlled heartbeat each week.',
+                                'Run one guarded research preview each week.',
                                 'local-directory-framework'
                             );
                             ?>
@@ -1919,7 +1900,7 @@ function nwmd_directory_render_operator_automation_section() {
                         <p class="description">
                             <?php
                             echo esc_html__(
-                                'Version 0.1.92 can run one guarded research preview on schedule when automation is enabled and Test Mode is disabled. Results still require supervised review.',
+                                'Automation runs only when Test Mode is disabled. Every result requires supervised review.',
                                 'local-directory-framework'
                             );
                             ?>
