@@ -849,13 +849,17 @@ function nwmd_directory_run_operator_research_preview() {
     );
     $run_id = absint($context['run_id'] ?? 0);
 
-    nwmd_directory_update_operator_usage(
+    $usage_started = nwmd_directory_update_operator_usage(
         $request_uuid,
         [
             'model'  => $model,
             'status' => 'started',
         ]
     );
+
+    if (is_wp_error($usage_started)) {
+        return $usage_started;
+    }
 
     $payload = [
         'model'             => $model,
@@ -1169,7 +1173,7 @@ function nwmd_directory_run_operator_research_preview() {
         return $saved;
     }
 
-    nwmd_directory_update_operator_usage(
+    $usage_completed = nwmd_directory_update_operator_usage(
         $request_uuid,
         [
             'response_id'          =>
@@ -1187,6 +1191,10 @@ function nwmd_directory_run_operator_research_preview() {
                 $recorded_cost_micros,
         ]
     );
+
+    if (is_wp_error($usage_completed)) {
+        return $usage_completed;
+    }
 
     return [
         'action'          => 'research_preview',

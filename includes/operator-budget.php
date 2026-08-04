@@ -525,6 +525,18 @@ function nwmd_directory_update_operator_usage(
 
     global $wpdb;
 
+    $request_uuid = sanitize_text_field($request_uuid);
+
+    if ('' === $request_uuid) {
+        return new WP_Error(
+            'nwmd_operator_usage_request_invalid',
+            __(
+                'The usage request identifier is invalid.',
+                'local-directory-framework'
+            )
+        );
+    }
+
     $data = wp_parse_args(
         is_array($data) ? $data : [],
         [
@@ -601,34 +613,35 @@ function nwmd_directory_update_operator_usage(
         'updated_at'           => $now,
     ];
 
+    $where = [
+        'request_uuid' => $request_uuid,
+        'status'       => 'reserved',
+    ];
+
     if ('started' === $status) {
         $update['started_at'] = $now;
-    }
-
-    if (
+    } elseif (
         in_array(
             $status,
             ['complete', 'error', 'cancelled'],
             true
         )
     ) {
-        $update['completed_at'] = $now;
+        $where['status']         = 'started';
+        $update['completed_at']  = $now;
     }
 
     $updated = $wpdb->update(
         $usage_table,
         $update,
-        [
-            'request_uuid' =>
-                sanitize_text_field($request_uuid),
-        ]
+        $where
     );
 
-    if (false === $updated) {
+    if (1 !== $updated) {
         return new WP_Error(
             'nwmd_operator_usage_update_failed',
             __(
-                'The usage record could not be updated.',
+                'The usage record could not complete its expected status transition.',
                 'local-directory-framework'
             )
         );
