@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Local Directory Framework
  * Description: Structured local business directory, monthly rankings, business requests, and advertising management.
- * Version: 0.1.87
+ * Version: 0.1.88
  * Author: NW Monthly
  * Text Domain: local-directory-framework
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('NWMD_DIRECTORY_VERSION', '0.1.87');
+define('NWMD_DIRECTORY_VERSION', '0.1.88');
 define('NWMD_DIRECTORY_PATH', plugin_dir_path(__FILE__));
 define('NWMD_DIRECTORY_URL', plugin_dir_url(__FILE__));
 
@@ -28,6 +28,7 @@ require_once NWMD_DIRECTORY_PATH . 'includes/operator-budget-test.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/operator-research-preview.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/operator-preview-validation.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/operator-draft-approval.php';
+require_once NWMD_DIRECTORY_PATH . 'includes/operator-automation.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/operator-admin.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/advertising.php';
 require_once NWMD_DIRECTORY_PATH . 'includes/advertising-inquiries.php';
