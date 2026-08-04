@@ -15,6 +15,87 @@ function nwmd_directory_rollback_operator_transaction() {
 }
 
 /**
+ * Return the database-specific operator advisory lock name.
+ *
+ * @return string
+ */
+function nwmd_directory_get_operator_lock_name() {
+
+    global $wpdb;
+
+    $database = defined('DB_NAME') ? (string) DB_NAME : '';
+
+    return 'nwmd_operator_' . sha1($database . '|' . $wpdb->prefix);
+}
+
+/**
+ * Acquire the single-worker operator advisory lock.
+ *
+ * @return true|WP_Error
+ */
+function nwmd_directory_acquire_operator_lock() {
+
+    global $wpdb;
+
+    $acquired = $wpdb->get_var(
+        $wpdb->prepare(
+            'SELECT GET_LOCK(%s, %d)',
+            nwmd_directory_get_operator_lock_name(),
+            5
+        )
+    );
+
+    if ('1' !== (string) $acquired) {
+        return new WP_Error(
+            'nwmd_operator_busy',
+            __(
+                'Another operator action is already running. Try again in a few seconds.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    return true;
+}
+
+/**
+ * Release the single-worker operator advisory lock.
+ */
+function nwmd_directory_release_operator_lock() {
+
+    global $wpdb;
+
+    $wpdb->get_var(
+        $wpdb->prepare(
+            'SELECT RELEASE_LOCK(%s)',
+            nwmd_directory_get_operator_lock_name()
+        )
+    );
+}
+
+/**
+ * Run one callback while holding the operator advisory lock.
+ *
+ * @param callable $callback Locked callback.
+ *
+ * @return mixed|WP_Error
+ */
+function nwmd_directory_with_operator_lock($callback) {
+
+    $locked = nwmd_directory_acquire_operator_lock();
+
+    if (is_wp_error($locked)) {
+        return $locked;
+    }
+
+    try {
+        return call_user_func($callback);
+    } finally {
+        nwmd_directory_release_operator_lock();
+    }
+}
+
+/**
  * Return a readable taxonomy label without failing on deleted terms.
  *
  * @param int    $term_id  Term ID.
@@ -44,7 +125,7 @@ function nwmd_directory_get_operator_term_label(
 }
 
 /**
- * Add readable taxonomy labels to one claimed checkpoint.
+ * Add readable taxonomy labels to one checkpoint.
  *
  * @param object $checkpoint Joined checkpoint and job record.
  *
@@ -88,6 +169,99 @@ function nwmd_directory_get_operator_checkpoint_context(
                 'nwmd_specialty'
             ),
     ];
+}
+
+/**
+ * Return the number of active specialty checkpoints.
+ *
+ * @return int
+ */
+function nwmd_directory_get_operator_active_checkpoint_count() {
+
+    global $wpdb;
+
+    $tables = nwmd_directory_get_operator_table_names();
+
+    if (
+        !nwmd_directory_operator_table_exists(
+            $tables['specialties']
+        )
+    ) {
+        return 0;
+    }
+
+    return absint(
+        $wpdb->get_var(
+            "SELECT COUNT(*)
+            FROM {$tables['specialties']}
+            WHERE status = 'in_progress'"
+        )
+    );
+}
+
+/**
+ * Return the active specialty checkpoint.
+ *
+ * @param bool $for_update Lock the selected row for update.
+ *
+ * @return object|null
+ */
+function nwmd_directory_get_active_operator_checkpoint(
+    $for_update = false
+) {
+
+    global $wpdb;
+
+    $tables = nwmd_directory_get_operator_table_names();
+    $lock   = $for_update ? ' FOR UPDATE' : '';
+
+    $checkpoint = $wpdb->get_row(
+        "SELECT
+            specialties.id AS checkpoint_id,
+            specialties.job_id,
+            specialties.specialty_term_id,
+            jobs.state_term_id,
+            jobs.city_term_id,
+            jobs.category_term_id
+        FROM {$tables['specialties']} AS specialties
+        INNER JOIN {$tables['jobs']} AS jobs
+            ON jobs.id = specialties.job_id
+        WHERE specialties.status = 'in_progress'
+        ORDER BY
+            specialties.started_at ASC,
+            specialties.id ASC
+        LIMIT 1{$lock}"
+    );
+
+    return is_object($checkpoint) ? $checkpoint : null;
+}
+
+/**
+ * Return the current checkpoint context for the admin page.
+ *
+ * @return array
+ */
+function nwmd_directory_get_current_operator_checkpoint_context() {
+
+    $checkpoint = nwmd_directory_get_active_operator_checkpoint(false);
+
+    if (!is_object($checkpoint)) {
+        return [];
+    }
+
+    $run = nwmd_directory_get_started_operator_run(
+        $checkpoint,
+        false
+    );
+
+    if (is_object($run)) {
+        $checkpoint->run_id   = absint($run->id);
+        $checkpoint->run_uuid = sanitize_text_field(
+            (string) $run->run_uuid
+        );
+    }
+
+    return nwmd_directory_get_operator_checkpoint_context($checkpoint);
 }
 
 /**
@@ -171,16 +345,19 @@ function nwmd_directory_create_operator_run(
  * Return one existing started run for a checkpoint, if available.
  *
  * @param object $checkpoint Joined checkpoint and job record.
+ * @param bool   $for_update Lock the selected row for update.
  *
  * @return object|null
  */
 function nwmd_directory_get_started_operator_run(
-    $checkpoint
+    $checkpoint,
+    $for_update = true
 ) {
 
     global $wpdb;
 
     $tables = nwmd_directory_get_operator_table_names();
+    $lock   = $for_update ? ' FOR UPDATE' : '';
 
     $run = $wpdb->get_row(
         $wpdb->prepare(
@@ -190,8 +367,7 @@ function nwmd_directory_get_started_operator_run(
                 AND specialty_term_id = %d
                 AND status = %s
             ORDER BY id DESC
-            LIMIT 1
-            FOR UPDATE",
+            LIMIT 1{$lock}",
             absint($checkpoint->job_id),
             absint($checkpoint->specialty_term_id),
             'started'
@@ -199,6 +375,166 @@ function nwmd_directory_get_started_operator_run(
     );
 
     return is_object($run) ? $run : null;
+}
+
+/**
+ * Return aggregate counters for one city-category job.
+ *
+ * @param int $job_id Operator job ID.
+ *
+ * @return array
+ */
+function nwmd_directory_get_operator_job_totals($job_id) {
+
+    global $wpdb;
+
+    $tables = nwmd_directory_get_operator_table_names();
+    $row    = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT
+                COUNT(*) AS specialty_total,
+                SUM(
+                    CASE WHEN status = 'complete' THEN 1 ELSE 0 END
+                ) AS specialty_completed,
+                SUM(businesses_created) AS businesses_created,
+                SUM(businesses_updated) AS businesses_updated,
+                SUM(deals_created) AS deals_created,
+                SUM(deals_updated) AS deals_updated
+            FROM {$tables['specialties']}
+            WHERE job_id = %d",
+            absint($job_id)
+        ),
+        ARRAY_A
+    );
+
+    return [
+        'specialty_total'     => absint($row['specialty_total'] ?? 0),
+        'specialty_completed' => absint(
+            $row['specialty_completed'] ?? 0
+        ),
+        'businesses_created'  => absint(
+            $row['businesses_created'] ?? 0
+        ),
+        'businesses_updated'  => absint(
+            $row['businesses_updated'] ?? 0
+        ),
+        'deals_created'       => absint($row['deals_created'] ?? 0),
+        'deals_updated'       => absint($row['deals_updated'] ?? 0),
+    ];
+}
+
+/**
+ * Synchronize one parent job from its specialty checkpoints.
+ *
+ * @param int    $job_id     Operator job ID.
+ * @param string $now        Current WordPress MySQL time.
+ * @param bool   $was_active Whether the job should remain in progress.
+ *
+ * @return array|WP_Error
+ */
+function nwmd_directory_sync_operator_job(
+    $job_id,
+    $now,
+    $was_active = true
+) {
+
+    global $wpdb;
+
+    $tables = nwmd_directory_get_operator_table_names();
+    $totals = nwmd_directory_get_operator_job_totals($job_id);
+
+    $job_complete =
+        $totals['specialty_total'] > 0
+        && $totals['specialty_completed'] >= $totals['specialty_total'];
+
+    if ($job_complete) {
+        $status       = 'complete';
+        $completed_at = $now;
+    } elseif ($totals['specialty_completed'] > 0 || $was_active) {
+        $status       = 'in_progress';
+        $completed_at = null;
+    } else {
+        $status       = 'pending';
+        $completed_at = null;
+    }
+
+    $updated = $wpdb->update(
+        $tables['jobs'],
+        [
+            'status'                      => $status,
+            'current_specialty_term_id'   => 0,
+            'specialty_total'             => $totals['specialty_total'],
+            'specialty_completed'         =>
+                $totals['specialty_completed'],
+            'businesses_created'          =>
+                $totals['businesses_created'],
+            'businesses_updated'          =>
+                $totals['businesses_updated'],
+            'deals_created'                => $totals['deals_created'],
+            'deals_updated'                => $totals['deals_updated'],
+            'last_error'                   => '',
+            'completed_at'                 => $completed_at,
+            'last_run_at'                  => $now,
+            'updated_at'                   => $now,
+        ],
+        [
+            'id' => absint($job_id),
+        ],
+        [
+            '%s',
+            '%d',
+            '%d',
+            '%d',
+            '%d',
+            '%d',
+            '%d',
+            '%d',
+            '%s',
+            '%s',
+            '%s',
+            '%s',
+        ],
+        [
+            '%d',
+        ]
+    );
+
+    if (false === $updated) {
+        return new WP_Error(
+            'nwmd_operator_job_sync_failed',
+            __(
+                'The parent operator job could not be synchronized.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $totals['job_complete'] = $job_complete;
+    $totals['job_status']   = $status;
+
+    return $totals;
+}
+
+/**
+ * Verify that no more than one checkpoint is active.
+ *
+ * @return true|WP_Error
+ */
+function nwmd_directory_validate_single_active_checkpoint() {
+
+    $active_count = nwmd_directory_get_operator_active_checkpoint_count();
+
+    if ($active_count > 1) {
+        return new WP_Error(
+            'nwmd_operator_multiple_active',
+            __(
+                'More than one checkpoint is in progress. No changes were made.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    return true;
 }
 
 /**
@@ -211,197 +547,592 @@ function nwmd_directory_get_started_operator_run(
  */
 function nwmd_directory_claim_next_operator_checkpoint() {
 
-    global $wpdb;
+    return nwmd_directory_with_operator_lock(
+        function () {
 
-    $storage = nwmd_directory_get_operator_storage_status();
+            global $wpdb;
 
-    if (empty($storage['ready'])) {
-        return new WP_Error(
-            'nwmd_operator_storage_incomplete',
-            __(
-                'Operator storage is incomplete.',
-                'local-directory-framework'
-            )
-        );
-    }
+            $storage = nwmd_directory_get_operator_storage_status();
 
-    $tables = nwmd_directory_get_operator_table_names();
-    $now    = current_time('mysql');
+            if (empty($storage['ready'])) {
+                return new WP_Error(
+                    'nwmd_operator_storage_incomplete',
+                    __(
+                        'Operator storage is incomplete.',
+                        'local-directory-framework'
+                    )
+                );
+            }
 
-    if (false === $wpdb->query('START TRANSACTION')) {
-        return new WP_Error(
-            'nwmd_operator_transaction_failed',
-            __(
-                'The operator could not start a database transaction.',
-                'local-directory-framework'
-            )
-        );
-    }
+            $tables = nwmd_directory_get_operator_table_names();
+            $now    = current_time('mysql');
 
-    $checkpoint = $wpdb->get_row(
-        "SELECT
-            specialties.id AS checkpoint_id,
-            specialties.job_id,
-            specialties.specialty_term_id,
-            jobs.state_term_id,
-            jobs.city_term_id,
-            jobs.category_term_id
-        FROM {$tables['specialties']} AS specialties
-        INNER JOIN {$tables['jobs']} AS jobs
-            ON jobs.id = specialties.job_id
-        WHERE specialties.status = 'in_progress'
-        ORDER BY
-            specialties.started_at ASC,
-            specialties.id ASC
-        LIMIT 1
-        FOR UPDATE"
-    );
+            if (false === $wpdb->query('START TRANSACTION')) {
+                return new WP_Error(
+                    'nwmd_operator_transaction_failed',
+                    __(
+                        'The operator could not start a database transaction.',
+                        'local-directory-framework'
+                    )
+                );
+            }
 
-    $resumed = is_object($checkpoint);
+            $valid = nwmd_directory_validate_single_active_checkpoint();
 
-    if (!$resumed) {
-        $checkpoint = $wpdb->get_row(
-            "SELECT
-                specialties.id AS checkpoint_id,
-                specialties.job_id,
-                specialties.specialty_term_id,
-                jobs.state_term_id,
-                jobs.city_term_id,
-                jobs.category_term_id
-            FROM {$tables['specialties']} AS specialties
-            INNER JOIN {$tables['jobs']} AS jobs
-                ON jobs.id = specialties.job_id
-            WHERE specialties.status = 'pending'
-                AND jobs.status IN ('pending', 'in_progress')
-            ORDER BY
-                jobs.id ASC,
-                specialties.sort_order ASC,
-                specialties.id ASC
-            LIMIT 1
-            FOR UPDATE"
-        );
-    }
+            if (is_wp_error($valid)) {
+                nwmd_directory_rollback_operator_transaction();
 
-    if (!is_object($checkpoint)) {
-        $wpdb->query('COMMIT');
+                return $valid;
+            }
 
-        return new WP_Error(
-            'nwmd_operator_queue_empty',
-            __(
-                'No pending specialty checkpoints remain.',
-                'local-directory-framework'
-            )
-        );
-    }
+            $checkpoint = nwmd_directory_get_active_operator_checkpoint(
+                true
+            );
+            $resumed    = is_object($checkpoint);
 
-    if (!$resumed) {
-        $checkpoint_updated = $wpdb->update(
-            $tables['specialties'],
-            [
-                'status'     => 'in_progress',
-                'last_error' => '',
-                'started_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'id'     => absint($checkpoint->checkpoint_id),
-                'status' => 'pending',
-            ],
-            [
-                '%s',
-                '%s',
-                '%s',
-                '%s',
-            ],
-            [
-                '%d',
-                '%s',
-            ]
-        );
+            if (!$resumed) {
+                $checkpoint = $wpdb->get_row(
+                    "SELECT
+                        specialties.id AS checkpoint_id,
+                        specialties.job_id,
+                        specialties.specialty_term_id,
+                        jobs.state_term_id,
+                        jobs.city_term_id,
+                        jobs.category_term_id
+                    FROM {$tables['specialties']} AS specialties
+                    INNER JOIN {$tables['jobs']} AS jobs
+                        ON jobs.id = specialties.job_id
+                    WHERE specialties.status = 'pending'
+                        AND jobs.status IN ('pending', 'in_progress')
+                    ORDER BY
+                        jobs.id ASC,
+                        specialties.sort_order ASC,
+                        specialties.id ASC
+                    LIMIT 1
+                    FOR UPDATE"
+                );
+            }
 
-        if (1 !== $checkpoint_updated) {
-            nwmd_directory_rollback_operator_transaction();
+            if (!is_object($checkpoint)) {
+                $wpdb->query('COMMIT');
 
-            return new WP_Error(
-                'nwmd_operator_checkpoint_claim_failed',
-                __(
-                    'The next checkpoint could not be claimed safely.',
-                    'local-directory-framework'
+                return new WP_Error(
+                    'nwmd_operator_queue_empty',
+                    __(
+                        'No pending specialty checkpoints remain.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            if (!$resumed) {
+                $checkpoint_updated = $wpdb->update(
+                    $tables['specialties'],
+                    [
+                        'status'       => 'in_progress',
+                        'last_error'   => '',
+                        'started_at'   => $now,
+                        'completed_at' => null,
+                        'updated_at'   => $now,
+                    ],
+                    [
+                        'id'     => absint($checkpoint->checkpoint_id),
+                        'status' => 'pending',
+                    ],
+                    [
+                        '%s',
+                        '%s',
+                        '%s',
+                        '%s',
+                        '%s',
+                    ],
+                    [
+                        '%d',
+                        '%s',
+                    ]
+                );
+
+                if (1 !== $checkpoint_updated) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return new WP_Error(
+                        'nwmd_operator_checkpoint_claim_failed',
+                        __(
+                            'The next checkpoint could not be claimed safely.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
+            }
+
+            $job_updated = $wpdb->query(
+                $wpdb->prepare(
+                    "UPDATE {$tables['jobs']}
+                    SET
+                        status = %s,
+                        current_specialty_term_id = %d,
+                        last_error = %s,
+                        started_at = COALESCE(started_at, %s),
+                        completed_at = NULL,
+                        last_run_at = %s,
+                        updated_at = %s
+                    WHERE id = %d",
+                    'in_progress',
+                    absint($checkpoint->specialty_term_id),
+                    '',
+                    $now,
+                    $now,
+                    $now,
+                    absint($checkpoint->job_id)
                 )
             );
-        }
-    }
 
-    $job_updated = $wpdb->query(
-        $wpdb->prepare(
-            "UPDATE {$tables['jobs']}
-            SET
-                status = %s,
-                current_specialty_term_id = %d,
-                last_error = %s,
-                started_at = COALESCE(started_at, %s),
-                last_run_at = %s,
-                updated_at = %s
-            WHERE id = %d",
-            'in_progress',
-            absint($checkpoint->specialty_term_id),
-            '',
-            $now,
-            $now,
-            $now,
-            absint($checkpoint->job_id)
-        )
+            if (false === $job_updated) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_job_claim_failed',
+                    __(
+                        'The parent operator job could not be updated.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $run = nwmd_directory_get_started_operator_run(
+                $checkpoint,
+                true
+            );
+
+            if (is_object($run)) {
+                $checkpoint->run_id   = absint($run->id);
+                $checkpoint->run_uuid = sanitize_text_field(
+                    (string) $run->run_uuid
+                );
+            } else {
+                $checkpoint = nwmd_directory_create_operator_run(
+                    $checkpoint,
+                    $now
+                );
+
+                if (is_wp_error($checkpoint)) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return $checkpoint;
+                }
+            }
+
+            if (false === $wpdb->query('COMMIT')) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_commit_failed',
+                    __(
+                        'The operator checkpoint could not be committed.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $context            =
+                nwmd_directory_get_operator_checkpoint_context(
+                    $checkpoint
+                );
+            $context['action']  = $resumed ? 'resumed' : 'started';
+            $context['resumed'] = $resumed;
+
+            return $context;
+        }
     );
+}
 
-    if (false === $job_updated) {
-        nwmd_directory_rollback_operator_transaction();
+/**
+ * Atomically complete the current specialty checkpoint.
+ *
+ * This foundation action records completion only. It does not create or
+ * update businesses, research sources, Deals, or rankings.
+ *
+ * @return array|WP_Error
+ */
+function nwmd_directory_complete_current_operator_checkpoint() {
 
-        return new WP_Error(
-            'nwmd_operator_job_claim_failed',
-            __(
-                'The parent operator job could not be updated.',
-                'local-directory-framework'
-            )
-        );
-    }
+    return nwmd_directory_with_operator_lock(
+        function () {
 
-    $run = nwmd_directory_get_started_operator_run($checkpoint);
+            global $wpdb;
 
-    if (is_object($run)) {
-        $checkpoint->run_id   = absint($run->id);
-        $checkpoint->run_uuid = sanitize_text_field(
-            (string) $run->run_uuid
-        );
-    } else {
-        $checkpoint = nwmd_directory_create_operator_run(
-            $checkpoint,
-            $now
-        );
+            $storage = nwmd_directory_get_operator_storage_status();
 
-        if (is_wp_error($checkpoint)) {
-            nwmd_directory_rollback_operator_transaction();
+            if (empty($storage['ready'])) {
+                return new WP_Error(
+                    'nwmd_operator_storage_incomplete',
+                    __(
+                        'Operator storage is incomplete.',
+                        'local-directory-framework'
+                    )
+                );
+            }
 
-            return $checkpoint;
+            $tables = nwmd_directory_get_operator_table_names();
+            $now    = current_time('mysql');
+
+            if (false === $wpdb->query('START TRANSACTION')) {
+                return new WP_Error(
+                    'nwmd_operator_transaction_failed',
+                    __(
+                        'The operator could not start a database transaction.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $valid = nwmd_directory_validate_single_active_checkpoint();
+
+            if (is_wp_error($valid)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return $valid;
+            }
+
+            $checkpoint = nwmd_directory_get_active_operator_checkpoint(
+                true
+            );
+
+            if (!is_object($checkpoint)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_no_active_checkpoint',
+                    __(
+                        'There is no active checkpoint to complete.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $run = nwmd_directory_get_started_operator_run(
+                $checkpoint,
+                true
+            );
+
+            if (!is_object($run)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_no_started_run',
+                    __(
+                        'The active checkpoint has no started run. Release it and start it again.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $checkpoint_updated = $wpdb->update(
+                $tables['specialties'],
+                [
+                    'status'       => 'complete',
+                    'last_error'   => '',
+                    'completed_at' => $now,
+                    'updated_at'   => $now,
+                ],
+                [
+                    'id'     => absint($checkpoint->checkpoint_id),
+                    'status' => 'in_progress',
+                ],
+                [
+                    '%s',
+                    '%s',
+                    '%s',
+                    '%s',
+                ],
+                [
+                    '%d',
+                    '%s',
+                ]
+            );
+
+            if (1 !== $checkpoint_updated) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_checkpoint_complete_failed',
+                    __(
+                        'The active checkpoint could not be completed safely.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $run_updated = $wpdb->update(
+                $tables['runs'],
+                [
+                    'status'         => 'complete',
+                    'result_summary' => __(
+                        'Checkpoint completed. No business or Deal data was changed.',
+                        'local-directory-framework'
+                    ),
+                    'error_message'  => '',
+                    'completed_at'   => $now,
+                    'updated_at'     => $now,
+                ],
+                [
+                    'id'     => absint($run->id),
+                    'status' => 'started',
+                ],
+                [
+                    '%s',
+                    '%s',
+                    '%s',
+                    '%s',
+                    '%s',
+                ],
+                [
+                    '%d',
+                    '%s',
+                ]
+            );
+
+            if (1 !== $run_updated) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_run_complete_failed',
+                    __(
+                        'The operator run could not be completed safely.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $totals = nwmd_directory_sync_operator_job(
+                $checkpoint->job_id,
+                $now,
+                true
+            );
+
+            if (is_wp_error($totals)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return $totals;
+            }
+
+            if (false === $wpdb->query('COMMIT')) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_commit_failed',
+                    __(
+                        'The completed checkpoint could not be committed.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $checkpoint->run_id   = absint($run->id);
+            $checkpoint->run_uuid = sanitize_text_field(
+                (string) $run->run_uuid
+            );
+
+            $context                      =
+                nwmd_directory_get_operator_checkpoint_context(
+                    $checkpoint
+                );
+            $context['action']            = 'completed';
+            $context['job_complete']      =
+                !empty($totals['job_complete']);
+            $context['specialty_total']   =
+                absint($totals['specialty_total']);
+            $context['specialty_completed'] =
+                absint($totals['specialty_completed']);
+
+            return $context;
         }
-    }
+    );
+}
 
-    if (false === $wpdb->query('COMMIT')) {
-        nwmd_directory_rollback_operator_transaction();
+/**
+ * Atomically release the current checkpoint back to pending.
+ *
+ * @return array|WP_Error
+ */
+function nwmd_directory_release_current_operator_checkpoint() {
 
-        return new WP_Error(
-            'nwmd_operator_commit_failed',
-            __(
-                'The operator checkpoint could not be committed.',
-                'local-directory-framework'
-            )
-        );
-    }
+    return nwmd_directory_with_operator_lock(
+        function () {
 
-    $context            =
-        nwmd_directory_get_operator_checkpoint_context($checkpoint);
-    $context['resumed'] = $resumed;
+            global $wpdb;
 
-    return $context;
+            $storage = nwmd_directory_get_operator_storage_status();
+
+            if (empty($storage['ready'])) {
+                return new WP_Error(
+                    'nwmd_operator_storage_incomplete',
+                    __(
+                        'Operator storage is incomplete.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $tables = nwmd_directory_get_operator_table_names();
+            $now    = current_time('mysql');
+
+            if (false === $wpdb->query('START TRANSACTION')) {
+                return new WP_Error(
+                    'nwmd_operator_transaction_failed',
+                    __(
+                        'The operator could not start a database transaction.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $valid = nwmd_directory_validate_single_active_checkpoint();
+
+            if (is_wp_error($valid)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return $valid;
+            }
+
+            $checkpoint = nwmd_directory_get_active_operator_checkpoint(
+                true
+            );
+
+            if (!is_object($checkpoint)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_no_active_checkpoint',
+                    __(
+                        'There is no active checkpoint to release.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $run = nwmd_directory_get_started_operator_run(
+                $checkpoint,
+                true
+            );
+
+            $checkpoint_updated = $wpdb->query(
+                $wpdb->prepare(
+                    "UPDATE {$tables['specialties']}
+                    SET
+                        status = %s,
+                        last_error = %s,
+                        started_at = NULL,
+                        completed_at = NULL,
+                        updated_at = %s
+                    WHERE id = %d
+                        AND status = %s",
+                    'pending',
+                    '',
+                    $now,
+                    absint($checkpoint->checkpoint_id),
+                    'in_progress'
+                )
+            );
+
+            if (1 !== $checkpoint_updated) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_checkpoint_release_failed',
+                    __(
+                        'The active checkpoint could not be released safely.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            if (is_object($run)) {
+                $run_updated = $wpdb->update(
+                    $tables['runs'],
+                    [
+                        'status'         => 'cancelled',
+                        'result_summary' => __(
+                            'Checkpoint released back to pending. No business or Deal data was changed.',
+                            'local-directory-framework'
+                        ),
+                        'error_message'  => '',
+                        'completed_at'   => $now,
+                        'updated_at'     => $now,
+                    ],
+                    [
+                        'id'     => absint($run->id),
+                        'status' => 'started',
+                    ],
+                    [
+                        '%s',
+                        '%s',
+                        '%s',
+                        '%s',
+                        '%s',
+                    ],
+                    [
+                        '%d',
+                        '%s',
+                    ]
+                );
+
+                if (1 !== $run_updated) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return new WP_Error(
+                        'nwmd_operator_run_cancel_failed',
+                        __(
+                            'The operator run could not be cancelled safely.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
+
+                $checkpoint->run_id   = absint($run->id);
+                $checkpoint->run_uuid = sanitize_text_field(
+                    (string) $run->run_uuid
+                );
+            }
+
+            $totals = nwmd_directory_sync_operator_job(
+                $checkpoint->job_id,
+                $now,
+                false
+            );
+
+            if (is_wp_error($totals)) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return $totals;
+            }
+
+            if (false === $wpdb->query('COMMIT')) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_commit_failed',
+                    __(
+                        'The released checkpoint could not be committed.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $context                     =
+                nwmd_directory_get_operator_checkpoint_context(
+                    $checkpoint
+                );
+            $context['action']           = 'released';
+            $context['run_cancelled']    = is_object($run);
+            $context['specialty_total']  =
+                absint($totals['specialty_total']);
+            $context['specialty_completed'] =
+                absint($totals['specialty_completed']);
+
+            return $context;
+        }
+    );
 }
 
 /**
@@ -449,9 +1180,15 @@ function nwmd_directory_get_operator_checkpoint_counts() {
 }
 
 /**
- * Handle the secure Run Next Item admin action.
+ * Process a secure operator admin action and return to the operator page.
+ *
+ * @param string   $nonce_action Nonce action.
+ * @param callable $callback     Operator callback.
  */
-function nwmd_directory_handle_operator_run_next() {
+function nwmd_directory_process_operator_admin_action(
+    $nonce_action,
+    $callback
+) {
 
     if (!current_user_can('manage_options')) {
         wp_die(
@@ -462,12 +1199,10 @@ function nwmd_directory_handle_operator_run_next() {
         );
     }
 
-    check_admin_referer(
-        'nwmd_directory_operator_run_next'
-    );
+    check_admin_referer($nonce_action);
 
-    $result = nwmd_directory_claim_next_operator_checkpoint();
-    $key    = 'nwmd_operator_run_' . get_current_user_id();
+    $result = call_user_func($callback);
+    $key    = 'nwmd_operator_action_' . get_current_user_id();
 
     if (is_wp_error($result)) {
         set_transient(
@@ -491,9 +1226,9 @@ function nwmd_directory_handle_operator_run_next() {
 
     $redirect_url = add_query_arg(
         [
-            'post_type' => 'nwmd_business',
-            'page'      => 'nwmd-data-operator',
-            'ran_next'  => '1',
+            'post_type'       => 'nwmd_business',
+            'page'            => 'nwmd-data-operator',
+            'operator_action' => '1',
         ],
         admin_url('edit.php')
     );
@@ -502,7 +1237,50 @@ function nwmd_directory_handle_operator_run_next() {
     exit;
 }
 
+/**
+ * Handle the secure Run Next Item admin action.
+ */
+function nwmd_directory_handle_operator_run_next() {
+
+    nwmd_directory_process_operator_admin_action(
+        'nwmd_directory_operator_run_next',
+        'nwmd_directory_claim_next_operator_checkpoint'
+    );
+}
+
+/**
+ * Handle the secure Complete Current Item admin action.
+ */
+function nwmd_directory_handle_operator_complete_current() {
+
+    nwmd_directory_process_operator_admin_action(
+        'nwmd_directory_operator_complete_current',
+        'nwmd_directory_complete_current_operator_checkpoint'
+    );
+}
+
+/**
+ * Handle the secure Release Current Item admin action.
+ */
+function nwmd_directory_handle_operator_release_current() {
+
+    nwmd_directory_process_operator_admin_action(
+        'nwmd_directory_operator_release_current',
+        'nwmd_directory_release_current_operator_checkpoint'
+    );
+}
+
 add_action(
     'admin_post_nwmd_directory_operator_run_next',
     'nwmd_directory_handle_operator_run_next'
+);
+
+add_action(
+    'admin_post_nwmd_directory_operator_complete_current',
+    'nwmd_directory_handle_operator_complete_current'
+);
+
+add_action(
+    'admin_post_nwmd_directory_operator_release_current',
+    'nwmd_directory_handle_operator_release_current'
 );

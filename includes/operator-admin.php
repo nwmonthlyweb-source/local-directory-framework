@@ -97,18 +97,20 @@ function nwmd_directory_render_operator_seed_notice() {
 }
 
 /**
- * Render the latest Run Next Item notice.
+ * Render the latest operator action notice.
  */
-function nwmd_directory_render_operator_run_notice() {
+function nwmd_directory_render_operator_action_notice() {
 
     if (
-        !isset($_GET['ran_next']) ||
-        '1' !== sanitize_text_field(wp_unslash($_GET['ran_next']))
+        !isset($_GET['operator_action']) ||
+        '1' !== sanitize_text_field(
+            wp_unslash($_GET['operator_action'])
+        )
     ) {
         return;
     }
 
-    $notice_key = 'nwmd_operator_run_' . get_current_user_id();
+    $notice_key = 'nwmd_operator_action_' . get_current_user_id();
     $notice     = get_transient($notice_key);
 
     delete_transient($notice_key);
@@ -126,7 +128,7 @@ function nwmd_directory_render_operator_run_notice() {
                     (string) (
                         $notice['message']
                         ?? __(
-                            'The next queue item could not be started.',
+                            'The operator action could not be completed.',
                             'local-directory-framework'
                         )
                     )
@@ -143,15 +145,46 @@ function nwmd_directory_render_operator_run_notice() {
         && is_array($notice['result'])
         ? $notice['result']
         : [];
+    $action = sanitize_key((string) ($result['action'] ?? ''));
 
-    $action = !empty($result['resumed'])
-        ? __('Resumed', 'local-directory-framework')
-        : __('Started', 'local-directory-framework');
+    $heading = __('Updated', 'local-directory-framework');
+    $message = __(
+        'The operator state was updated.',
+        'local-directory-framework'
+    );
+    $class   = 'notice notice-success is-dismissible';
+
+    if ('started' === $action) {
+        $heading = __('Started', 'local-directory-framework');
+        $message = __(
+            'The checkpoint and run were recorded. No business or Deal data was changed.',
+            'local-directory-framework'
+        );
+    } elseif ('resumed' === $action) {
+        $heading = __('Resumed', 'local-directory-framework');
+        $message = __(
+            'The existing checkpoint and run were resumed. No business or Deal data was changed.',
+            'local-directory-framework'
+        );
+    } elseif ('completed' === $action) {
+        $heading = __('Completed', 'local-directory-framework');
+        $message = __(
+            'The checkpoint and run were completed. No business or Deal data was changed.',
+            'local-directory-framework'
+        );
+    } elseif ('released' === $action) {
+        $heading = __('Released', 'local-directory-framework');
+        $message = __(
+            'The checkpoint returned to pending and its run history was preserved. No business or Deal data was changed.',
+            'local-directory-framework'
+        );
+        $class = 'notice notice-warning is-dismissible';
+    }
 
     ?>
-    <div class="notice notice-success is-dismissible">
+    <div class="<?php echo esc_attr($class); ?>">
         <p>
-            <strong><?php echo esc_html($action); ?>:</strong>
+            <strong><?php echo esc_html($heading); ?>:</strong>
             <?php
             echo esc_html(
                 sprintf(
@@ -164,15 +197,50 @@ function nwmd_directory_render_operator_run_notice() {
             );
             ?>
         </p>
-        <p>
-            <?php
-            echo esc_html__(
-                'The checkpoint and run were recorded. No business or Deal data was changed.',
-                'local-directory-framework'
-            );
-            ?>
-        </p>
+        <p><?php echo esc_html($message); ?></p>
     </div>
+    <?php
+}
+
+/**
+ * Render a secure operator action form.
+ *
+ * @param string $action       Admin-post action.
+ * @param string $nonce_action Nonce action.
+ * @param string $label        Button label.
+ * @param string $class        WordPress button class.
+ * @param string $confirm      Optional confirmation text.
+ */
+function nwmd_directory_render_operator_action_form(
+    $action,
+    $nonce_action,
+    $label,
+    $class = 'button button-secondary',
+    $confirm = ''
+) {
+
+    ?>
+    <form
+        method="post"
+        action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+        style="display: inline-block; margin: 0 8px 8px 0;"
+    >
+        <input
+            type="hidden"
+            name="action"
+            value="<?php echo esc_attr($action); ?>"
+        >
+        <?php wp_nonce_field($nonce_action); ?>
+        <button
+            type="submit"
+            class="<?php echo esc_attr($class); ?>"
+            <?php if ('' !== $confirm) : ?>
+                onclick="return confirm('<?php echo esc_js($confirm); ?>');"
+            <?php endif; ?>
+        >
+            <?php echo esc_html($label); ?>
+        </button>
+    </form>
     <?php
 }
 
@@ -201,6 +269,18 @@ function nwmd_directory_render_operator_admin_page() {
         ? nwmd_directory_get_operator_checkpoint_counts()
         : [];
 
+    $active_count = function_exists(
+        'nwmd_directory_get_operator_active_checkpoint_count'
+    )
+        ? nwmd_directory_get_operator_active_checkpoint_count()
+        : 0;
+
+    $current = function_exists(
+        'nwmd_directory_get_current_operator_checkpoint_context'
+    )
+        ? nwmd_directory_get_current_operator_checkpoint_context()
+        : [];
+
     ?>
     <div class="wrap">
         <h1>
@@ -213,7 +293,7 @@ function nwmd_directory_render_operator_admin_page() {
         </h1>
 
         <?php nwmd_directory_render_operator_seed_notice(); ?>
-        <?php nwmd_directory_render_operator_run_notice(); ?>
+        <?php nwmd_directory_render_operator_action_notice(); ?>
 
         <?php if (!empty($status['ready'])) : ?>
             <div class="notice notice-success inline">
@@ -239,58 +319,46 @@ function nwmd_directory_render_operator_admin_page() {
             </div>
         <?php endif; ?>
 
+        <?php if ($active_count > 1) : ?>
+            <div class="notice notice-error inline">
+                <p>
+                    <?php
+                    echo esc_html__(
+                        'More than one checkpoint is in progress. Operator actions are blocked to protect queue integrity.',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </p>
+            </div>
+        <?php endif; ?>
+
         <table class="widefat striped" style="max-width: 760px;">
             <thead>
                 <tr>
                     <th scope="col">
-                        <?php
-                        echo esc_html__(
-                            'Storage',
-                            'local-directory-framework'
-                        );
-                        ?>
+                        <?php echo esc_html__('Storage', 'local-directory-framework'); ?>
                     </th>
                     <th scope="col">
-                        <?php
-                        echo esc_html__(
-                            'Records',
-                            'local-directory-framework'
-                        );
-                        ?>
+                        <?php echo esc_html__('Records', 'local-directory-framework'); ?>
                     </th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>
-                        <?php
-                        echo esc_html__(
-                            'City-category jobs',
-                            'local-directory-framework'
-                        );
-                        ?>
+                        <?php echo esc_html__('City-category jobs', 'local-directory-framework'); ?>
                     </td>
                     <td><?php echo esc_html((string) ($counts['jobs'] ?? 0)); ?></td>
                 </tr>
                 <tr>
                     <td>
-                        <?php
-                        echo esc_html__(
-                            'Specialty checkpoints',
-                            'local-directory-framework'
-                        );
-                        ?>
+                        <?php echo esc_html__('Specialty checkpoints', 'local-directory-framework'); ?>
                     </td>
                     <td><?php echo esc_html((string) ($counts['specialties'] ?? 0)); ?></td>
                 </tr>
                 <tr>
                     <td>
-                        <?php
-                        echo esc_html__(
-                            'Operator runs',
-                            'local-directory-framework'
-                        );
-                        ?>
+                        <?php echo esc_html__('Operator runs', 'local-directory-framework'); ?>
                     </td>
                     <td><?php echo esc_html((string) ($counts['runs'] ?? 0)); ?></td>
                 </tr>
@@ -298,14 +366,7 @@ function nwmd_directory_render_operator_admin_page() {
         </table>
 
         <?php if (!empty($status['ready'])) : ?>
-            <h2>
-                <?php
-                echo esc_html__(
-                    'Queue progress',
-                    'local-directory-framework'
-                );
-                ?>
-            </h2>
+            <h2><?php echo esc_html__('Queue progress', 'local-directory-framework'); ?></h2>
 
             <table class="widefat striped" style="max-width: 760px;">
                 <thead>
@@ -338,51 +399,92 @@ function nwmd_directory_render_operator_admin_page() {
                 </tbody>
             </table>
 
-            <h2>
-                <?php
-                echo esc_html__(
-                    'Run operator',
-                    'local-directory-framework'
-                );
-                ?>
-            </h2>
+            <?php if (!empty($current)) : ?>
+                <h2><?php echo esc_html__('Current item', 'local-directory-framework'); ?></h2>
+
+                <table class="widefat striped" style="max-width: 760px;">
+                    <tbody>
+                        <tr>
+                            <th scope="row" style="width: 220px;">
+                                <?php echo esc_html__('State', 'local-directory-framework'); ?>
+                            </th>
+                            <td><?php echo esc_html((string) ($current['state_name'] ?? '')); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <?php echo esc_html__('City', 'local-directory-framework'); ?>
+                            </th>
+                            <td><?php echo esc_html((string) ($current['city_name'] ?? '')); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <?php echo esc_html__('Category', 'local-directory-framework'); ?>
+                            </th>
+                            <td><?php echo esc_html((string) ($current['category_name'] ?? '')); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <?php echo esc_html__('Specialty', 'local-directory-framework'); ?>
+                            </th>
+                            <td><?php echo esc_html((string) ($current['specialty_name'] ?? '')); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <?php echo esc_html__('Run ID', 'local-directory-framework'); ?>
+                            </th>
+                            <td><?php echo esc_html((string) ($current['run_id'] ?? 0)); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+
+            <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
             <p>
                 <?php
                 echo esc_html__(
-                    'Safely claim or resume one queue item and create its run record. This foundation step does not change business or Deal data.',
+                    'These foundation controls update queue and run state only. They do not create or change business or Deal data.',
                     'local-directory-framework'
                 );
                 ?>
             </p>
 
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input
-                    type="hidden"
-                    name="action"
-                    value="nwmd_directory_operator_run_next"
-                >
-                <?php
-                wp_nonce_field(
-                    'nwmd_directory_operator_run_next'
-                );
-                submit_button(
-                    __('Run Next Item', 'local-directory-framework'),
-                    'primary',
-                    'submit',
-                    false
-                );
-                ?>
-            </form>
+            <?php
+            nwmd_directory_render_operator_action_form(
+                'nwmd_directory_operator_run_next',
+                'nwmd_directory_operator_run_next',
+                __('Run Next Item', 'local-directory-framework'),
+                'button button-primary'
+            );
+            ?>
 
-            <h2>
+            <?php if (!empty($current) && 1 === $active_count) : ?>
                 <?php
-                echo esc_html__(
-                    'Queue setup',
-                    'local-directory-framework'
+                nwmd_directory_render_operator_action_form(
+                    'nwmd_directory_operator_complete_current',
+                    'nwmd_directory_operator_complete_current',
+                    __('Complete Current Item', 'local-directory-framework'),
+                    'button button-secondary',
+                    __(
+                        'Complete this checkpoint without creating business or Deal data?',
+                        'local-directory-framework'
+                    )
+                );
+
+                nwmd_directory_render_operator_action_form(
+                    'nwmd_directory_operator_release_current',
+                    'nwmd_directory_operator_release_current',
+                    __('Release Current Item', 'local-directory-framework'),
+                    'button button-secondary',
+                    __(
+                        'Return this checkpoint to pending and cancel its current run?',
+                        'local-directory-framework'
+                    )
                 );
                 ?>
-            </h2>
+            <?php endif; ?>
+
+            <h2><?php echo esc_html__('Queue setup', 'local-directory-framework'); ?></h2>
 
             <p>
                 <?php
