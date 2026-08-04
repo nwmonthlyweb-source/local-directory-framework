@@ -797,6 +797,41 @@ function nwmd_directory_log_operator_preview_error_audit_failure(
 }
 
 /**
+ * Record a preview failure in the usage ledger.
+ *
+ * A usage-ledger transition failure remains secondary and does not
+ * replace the original request, parsing, validation, or save error.
+ *
+ * @param string $request_uuid Request UUID.
+ * @param array  $data         Usage error data.
+ *
+ * @return void
+ */
+function nwmd_directory_record_operator_preview_usage_error(
+    $request_uuid,
+    $data
+) {
+
+    $updated = nwmd_directory_update_operator_usage(
+        $request_uuid,
+        $data
+    );
+
+    if (!is_wp_error($updated)) {
+        return;
+    }
+
+    error_log(
+        sprintf(
+            'NW Monthly Data Operator preview usage error transition '
+                . 'failed for request %s: %s',
+            sanitize_text_field((string) $request_uuid),
+            sanitize_text_field($updated->get_error_message())
+        )
+    );
+}
+
+/**
  * Reserve the current checkpoint for one supervised live preview.
  *
  * @return array|WP_Error
@@ -1005,7 +1040,7 @@ function nwmd_directory_run_operator_research_preview() {
             $response->get_error_message()
         );
 
-        nwmd_directory_update_operator_usage(
+        nwmd_directory_record_operator_preview_usage_error(
             $request_uuid,
             [
                 'model'         => $model,
@@ -1043,7 +1078,7 @@ function nwmd_directory_run_operator_research_preview() {
             'local-directory-framework'
         );
 
-        nwmd_directory_update_operator_usage(
+        nwmd_directory_record_operator_preview_usage_error(
             $request_uuid,
             [
                 'model'         => $model,
@@ -1118,7 +1153,7 @@ function nwmd_directory_run_operator_research_preview() {
             );
         }
 
-        nwmd_directory_update_operator_usage(
+        nwmd_directory_record_operator_preview_usage_error(
             $request_uuid,
             [
                 'response_id'          =>
@@ -1159,7 +1194,7 @@ function nwmd_directory_run_operator_research_preview() {
         nwmd_directory_extract_operator_response_text($decoded);
 
     if (is_wp_error($output_text)) {
-        nwmd_directory_update_operator_usage(
+        nwmd_directory_record_operator_preview_usage_error(
             $request_uuid,
             [
                 'response_id'          =>
@@ -1201,7 +1236,7 @@ function nwmd_directory_run_operator_research_preview() {
         );
 
     if (is_wp_error($preview)) {
-        nwmd_directory_update_operator_usage(
+        nwmd_directory_record_operator_preview_usage_error(
             $request_uuid,
             [
                 'response_id'          =>
@@ -1261,7 +1296,7 @@ function nwmd_directory_run_operator_research_preview() {
     );
 
     if (is_wp_error($saved)) {
-        nwmd_directory_update_operator_usage(
+        nwmd_directory_record_operator_preview_usage_error(
             $request_uuid,
             [
                 'response_id'          =>
