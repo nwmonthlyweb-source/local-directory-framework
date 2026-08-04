@@ -1252,6 +1252,39 @@ function nwmd_directory_release_current_operator_checkpoint() {
             }
 
             if (is_object($run)) {
+                $reserved_usage_cancelled = $wpdb->query(
+                    $wpdb->prepare(
+                        "UPDATE {$tables['usage']}
+                        SET
+                            status = %s,
+                            error_message = %s,
+                            completed_at = %s,
+                            updated_at = %s
+                        WHERE run_id = %d
+                            AND operation_type = %s
+                            AND status = %s",
+                        'cancelled',
+                        'Operator run released before the research preview started.',
+                        $now,
+                        $now,
+                        absint($run->id),
+                        'research_preview',
+                        'reserved'
+                    )
+                );
+
+                if (false === $reserved_usage_cancelled) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return new WP_Error(
+                        'nwmd_operator_usage_cancel_failed',
+                        __(
+                            'The reserved research preview usage could not be cancelled safely.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
+
                 $release_summary = isset($run->result_summary)
                     ? (string) $run->result_summary
                     : '';
