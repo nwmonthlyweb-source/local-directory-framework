@@ -513,7 +513,7 @@ function nwmd_directory_handle_operator_automation_heartbeat() {
         [
             'last_attempt_at' => current_time('mysql'),
             'last_result'     => __(
-                'Scheduler heartbeat completed. Automatic queue execution is not installed in version 0.1.90.',
+                'Scheduler heartbeat completed. Automatic queue execution is not installed in version 0.1.91.',
                 'local-directory-framework'
             ),
             'last_error'      => '',
@@ -638,6 +638,309 @@ function nwmd_directory_run_operator_automation_self_test() {
 }
 
 /**
+ * Store one short-lived automation preflight notice.
+ *
+ * @param array $notice Notice data.
+ */
+function nwmd_directory_store_operator_automation_preflight_notice(
+    $notice
+) {
+
+    set_transient(
+        'nwmd_operator_automation_preflight_'
+            . get_current_user_id(),
+        is_array($notice) ? $notice : [],
+        MINUTE_IN_SECONDS
+    );
+}
+
+/**
+ * Return and remove the current user's automation preflight notice.
+ *
+ * @return array
+ */
+function nwmd_directory_get_operator_automation_preflight_notice() {
+
+    $key = 'nwmd_operator_automation_preflight_'
+        . get_current_user_id();
+
+    $notice = get_transient($key);
+
+    delete_transient($key);
+
+    return is_array($notice) ? $notice : [];
+}
+
+/**
+ * Run one deterministic no-cost automation preflight.
+ *
+ * This test reads the real storage, queue, OpenAI configuration, and
+ * budget safeguards. It does not call OpenAI, reserve budget, claim a
+ * queue item, create a run, or change directory data.
+ *
+ * @return array|WP_Error
+ */
+function nwmd_directory_run_operator_automation_preflight_test() {
+
+    $required_functions = [
+        'nwmd_directory_get_operator_storage_status',
+        'nwmd_directory_get_openai_configuration_status',
+        'nwmd_directory_get_operator_budget_settings',
+        'nwmd_directory_get_operator_usage_summary',
+        'nwmd_directory_can_reserve_operator_usage',
+        'nwmd_directory_get_operator_checkpoint_counts',
+        'nwmd_directory_get_operator_active_checkpoint_count',
+        'nwmd_directory_validate_single_active_checkpoint',
+        'nwmd_directory_get_current_operator_checkpoint_context',
+    ];
+
+    foreach ($required_functions as $required_function) {
+        if (!function_exists($required_function)) {
+            return new WP_Error(
+                'nwmd_operator_automation_preflight_unavailable',
+                __(
+                    'One or more required automation preflight functions are unavailable.',
+                    'local-directory-framework'
+                )
+            );
+        }
+    }
+
+    $budget =
+        nwmd_directory_get_operator_budget_settings();
+
+    if (empty($budget['test_mode'])) {
+        return new WP_Error(
+            'nwmd_operator_automation_preflight_test_mode_required',
+            __(
+                'Enable supervised test mode before running the automation preflight.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $scheduled = wp_next_scheduled(
+        nwmd_directory_get_operator_automation_hook()
+    );
+
+    if (false !== $scheduled) {
+        return new WP_Error(
+            'nwmd_operator_automation_preflight_schedule_present',
+            __(
+                'A heartbeat is unexpectedly scheduled while supervised test mode is enabled.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $storage_before =
+        nwmd_directory_get_operator_storage_status();
+
+    if (empty($storage_before['ready'])) {
+        return new WP_Error(
+            'nwmd_operator_automation_preflight_storage_incomplete',
+            __(
+                'Operator storage is incomplete.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $configuration =
+        nwmd_directory_get_openai_configuration_status();
+
+    if (empty($configuration['configured'])) {
+        return new WP_Error(
+            'nwmd_operator_automation_preflight_openai_missing',
+            __(
+                'OpenAI is not configured.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if (
+        'gpt-5.6-terra'
+        !== (string) ($configuration['model'] ?? '')
+    ) {
+        return new WP_Error(
+            'nwmd_operator_automation_preflight_model_unsupported',
+            __(
+                'The controlled operator currently requires gpt-5.6-terra.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $checkpoint_counts_before =
+        nwmd_directory_get_operator_checkpoint_counts();
+
+    $active_count_before =
+        nwmd_directory_get_operator_active_checkpoint_count();
+
+    $valid =
+        nwmd_directory_validate_single_active_checkpoint();
+
+    if (is_wp_error($valid)) {
+        return $valid;
+    }
+
+    if (1 === $active_count_before) {
+        $current =
+            nwmd_directory_get_current_operator_checkpoint_context();
+
+        if (absint($current['run_id'] ?? 0) < 1) {
+            return new WP_Error(
+                'nwmd_operator_automation_preflight_run_missing',
+                __(
+                    'The active checkpoint does not have a valid started run.',
+                    'local-directory-framework'
+                )
+            );
+        }
+    }
+
+    $usage_before =
+        nwmd_directory_get_operator_usage_summary();
+
+    $planned_cost_micros = 250000;
+
+    $eligibility =
+        nwmd_directory_can_reserve_operator_usage(
+            $planned_cost_micros
+        );
+
+    $storage_after =
+        nwmd_directory_get_operator_storage_status();
+
+    $checkpoint_counts_after =
+        nwmd_directory_get_operator_checkpoint_counts();
+
+    $active_count_after =
+        nwmd_directory_get_operator_active_checkpoint_count();
+
+    $usage_after =
+        nwmd_directory_get_operator_usage_summary();
+
+    if (
+        wp_json_encode($storage_before['counts'] ?? [])
+        !== wp_json_encode($storage_after['counts'] ?? [])
+        || wp_json_encode($checkpoint_counts_before)
+        !== wp_json_encode($checkpoint_counts_after)
+        || $active_count_before !== $active_count_after
+        || wp_json_encode($usage_before)
+        !== wp_json_encode($usage_after)
+    ) {
+        return new WP_Error(
+            'nwmd_operator_automation_preflight_changed_data',
+            __(
+                'The no-cost automation preflight unexpectedly changed operator data.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if (is_wp_error($eligibility)) {
+        $eligibility_message = sprintf(
+            /* translators: %s: Current paid-run safeguard result. */
+            __(
+                'Blocked by safeguards: %s',
+                'local-directory-framework'
+            ),
+            sanitize_text_field(
+                $eligibility->get_error_message()
+            )
+        );
+    } else {
+        $eligibility_message = __(
+            'Ready under the current hard limits',
+            'local-directory-framework'
+        );
+    }
+
+    $message = sprintf(
+        /* translators: %s: Current paid-run eligibility. */
+        __(
+            'No-cost automation preflight completed. No OpenAI call, budget reservation, queue claim, or directory record was created. Paid-run eligibility: %s.',
+            'local-directory-framework'
+        ),
+        $eligibility_message
+    );
+
+    return [
+        'message'          => $message,
+        'eligibility'      => is_wp_error($eligibility)
+            ? 'blocked'
+            : 'ready',
+        'pending_count'    => absint(
+            $checkpoint_counts_after['pending'] ?? 0
+        ),
+        'active_count'     => $active_count_after,
+        'usage_records'    => absint(
+            $usage_after['request_count'] ?? 0
+        ),
+        'guarded_cost'     => absint(
+            $usage_after['guarded_cost_micros'] ?? 0
+        ),
+    ];
+}
+
+/**
+ * Handle the secured no-cost automation preflight.
+ */
+function nwmd_directory_handle_operator_automation_preflight() {
+
+    if (!current_user_can('manage_options')) {
+        wp_die(
+            esc_html__(
+                'You do not have permission to perform this action.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    check_admin_referer(
+        'nwmd_directory_operator_automation_preflight'
+    );
+
+    $result =
+        nwmd_directory_run_operator_automation_preflight_test();
+
+    if (is_wp_error($result)) {
+        nwmd_directory_store_operator_automation_preflight_notice(
+            [
+                'success' => false,
+                'message' => $result->get_error_message(),
+            ]
+        );
+    } else {
+        nwmd_directory_store_operator_automation_preflight_notice(
+            [
+                'success' => true,
+                'message' => (string) $result['message'],
+            ]
+        );
+    }
+
+    $redirect_url = add_query_arg(
+        [
+            'post_type'            => 'nwmd_business',
+            'page'                 => 'nwmd-data-operator',
+            'automation_preflight' => '1',
+        ],
+        admin_url('edit.php')
+    );
+
+    wp_safe_redirect($redirect_url);
+    exit;
+}
+
+add_action(
+    'admin_post_nwmd_directory_operator_automation_preflight',
+    'nwmd_directory_handle_operator_automation_preflight'
+);
+
+/**
  * Handle the secured no-cost heartbeat self-test.
  */
 function nwmd_directory_handle_operator_automation_self_test() {
@@ -731,7 +1034,7 @@ function nwmd_directory_format_operator_automation_date(
 /**
  * Render controlled automation settings and health.
  *
- * Version 0.1.90 adds configuration, health visibility, and a no-cost weekly scheduler heartbeat.
+ * Version 0.1.91 adds configuration, health visibility, and a no-cost weekly scheduler heartbeat.
  * Automatic queue execution is not installed by this milestone.
  */
 function nwmd_directory_render_operator_automation_section() {
@@ -761,6 +1064,17 @@ function nwmd_directory_render_operator_automation_section() {
             nwmd_directory_get_operator_automation_test_notice();
     }
 
+    $preflight_notice = [];
+
+    if (
+        isset($_GET['automation_preflight'])
+        && '1' === sanitize_text_field(
+            wp_unslash($_GET['automation_preflight'])
+        )
+    ) {
+        $preflight_notice =
+            nwmd_directory_get_operator_automation_preflight_notice();
+    }
     $weekdays = [
         0 => __('Sunday', 'local-directory-framework'),
         1 => __('Monday', 'local-directory-framework'),
@@ -882,6 +1196,74 @@ function nwmd_directory_render_operator_automation_section() {
         </form>
     <?php endif; ?>
 
+    <?php if (!empty($budget['test_mode'])) : ?>
+        <h3>
+            <?php
+            echo esc_html__(
+                'Automation preflight self-test',
+                'local-directory-framework'
+            );
+            ?>
+        </h3>
+
+        <?php if (!empty($preflight_notice)) : ?>
+            <div class="notice <?php
+                echo !empty($preflight_notice['success'])
+                    ? 'notice-success'
+                    : 'notice-error';
+            ?> inline">
+                <p>
+                    <?php
+                    echo esc_html(
+                        (string) (
+                            $preflight_notice['message']
+                            ?? __(
+                                'The automation preflight did not return a result.',
+                                'local-directory-framework'
+                            )
+                        )
+                    );
+                    ?>
+                </p>
+            </div>
+        <?php endif; ?>
+
+        <p>
+            <?php
+            echo esc_html__(
+                'This local test checks storage, queue integrity, OpenAI configuration, and the real budget gate without calling OpenAI, reserving budget, or changing operator data.',
+                'local-directory-framework'
+            );
+            ?>
+        </p>
+
+        <form
+            method="post"
+            action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+        >
+            <input
+                type="hidden"
+                name="action"
+                value="nwmd_directory_operator_automation_preflight"
+            >
+
+            <?php
+            wp_nonce_field(
+                'nwmd_directory_operator_automation_preflight'
+            );
+
+            submit_button(
+                __(
+                    'Run No-Cost Automation Preflight',
+                    'local-directory-framework'
+                ),
+                'secondary',
+                'submit',
+                false
+            );
+            ?>
+        </form>
+    <?php endif; ?>
     <table class="widefat striped" style="max-width: 760px;">
         <tbody>
             <tr>
@@ -1149,7 +1531,7 @@ function nwmd_directory_render_operator_automation_section() {
                         <p class="description">
                             <?php
                             echo esc_html__(
-                                'Version 0.1.90 schedules a heartbeat only. Automatic queue execution and paid research remain unavailable.',
+                                'Version 0.1.91 schedules a heartbeat only. Automatic queue execution and paid research remain unavailable.',
                                 'local-directory-framework'
                             );
                             ?>
