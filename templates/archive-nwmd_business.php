@@ -721,32 +721,6 @@ if ($city_term instanceof WP_Term) {
                                     </p>
                                 <?php endif; ?>
 
-                                <?php if (is_object($featured_deal)) : ?>
-                                    <div class="nwmd-business-row__deal">
-                                        <span
-                                            class="nwmd-business-row__deal-label"
-                                        >
-                                            <?php
-                                            echo esc_html__(
-                                                'Deal',
-                                                'local-directory-framework'
-                                            );
-                                            ?>
-                                        </span>
-
-                                        <span
-                                            class="nwmd-business-row__deal-text"
-                                        >
-                                            <?php
-                                            echo esc_html(
-                                                nwmd_directory_get_business_deal_card_text(
-                                                    $featured_deal
-                                                )
-                                            );
-                                            ?>
-                                        </span>
-                                    </div>
-                                <?php endif; ?>
                             </div>
 
                             <div class="nwmd-business-row__actions">
@@ -808,6 +782,33 @@ if ($city_term instanceof WP_Term) {
                                     ?>
                                 </a>
                             </div>
+
+                            <?php if (is_object($featured_deal)) : ?>
+                                <div class="nwmd-business-row__deal">
+                                    <span
+                                        class="nwmd-business-row__deal-label"
+                                    >
+                                        <?php
+                                        echo esc_html__(
+                                            'Deal',
+                                            'local-directory-framework'
+                                        );
+                                        ?>
+                                    </span>
+
+                                    <span
+                                        class="nwmd-business-row__deal-text"
+                                    >
+                                        <?php
+                                        echo esc_html(
+                                            nwmd_directory_get_business_deal_card_text(
+                                                $featured_deal
+                                            )
+                                        );
+                                        ?>
+                                    </span>
+                                </div>
+                            <?php endif; ?>
                         </article>
                     <?php endwhile; ?>
                 </div>
