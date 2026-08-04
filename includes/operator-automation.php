@@ -247,6 +247,286 @@ function nwmd_directory_update_operator_automation_status(
 }
 
 /**
+ * Return the controlled automation cron hook.
+ *
+ * @return string
+ */
+function nwmd_directory_get_operator_automation_hook() {
+
+    return 'nwmd_directory_operator_automation_heartbeat';
+}
+
+/**
+ * Calculate the next configured weekly scheduler time.
+ *
+ * @param array $settings Automation settings.
+ *
+ * @return int
+ */
+function nwmd_directory_get_next_operator_automation_timestamp(
+    $settings
+) {
+
+    $weekday = min(
+        6,
+        absint($settings['weekday'] ?? 2)
+    );
+
+    $hour = min(
+        23,
+        absint($settings['hour'] ?? 3)
+    );
+
+    $now = current_datetime();
+
+    $target = $now->setTime(
+        $hour,
+        0,
+        0
+    );
+
+    $days_ahead = (
+        $weekday
+        - absint($now->format('w'))
+        + 7
+    ) % 7;
+
+    if ($days_ahead > 0) {
+        $target = $target->modify(
+            sprintf(
+                '+%d days',
+                $days_ahead
+            )
+        );
+    }
+
+    if ($target <= $now) {
+        $target = $target->modify('+7 days');
+    }
+
+    return $target->getTimestamp();
+}
+
+/**
+ * Store one scheduler configuration error.
+ *
+ * @param string $message Safe error message.
+ *
+ * @return WP_Error
+ */
+function nwmd_directory_record_operator_schedule_error(
+    $message
+) {
+
+    $message = sanitize_text_field((string) $message);
+    $now     = current_time('mysql');
+
+    nwmd_directory_update_operator_automation_status(
+        [
+            'last_error_at' => $now,
+            'last_result'   =>
+                __(
+                    'Scheduler configuration failed.',
+                    'local-directory-framework'
+                ),
+            'last_error'    => $message,
+        ]
+    );
+
+    return new WP_Error(
+        'nwmd_operator_schedule_failed',
+        $message
+    );
+}
+
+/**
+ * Clear every controlled automation heartbeat.
+ *
+ * @return true|WP_Error
+ */
+function nwmd_directory_clear_operator_automation_schedule() {
+
+    $cleared = wp_clear_scheduled_hook(
+        nwmd_directory_get_operator_automation_hook(),
+        [],
+        true
+    );
+
+    if (is_wp_error($cleared)) {
+        return nwmd_directory_record_operator_schedule_error(
+            $cleared->get_error_message()
+        );
+    }
+
+    if (false === $cleared) {
+        return nwmd_directory_record_operator_schedule_error(
+            __(
+                'The controlled automation schedule could not be cleared.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    return true;
+}
+
+/**
+ * Rebuild the weekly heartbeat from current settings.
+ *
+ * This schedules only a no-cost heartbeat. It does not claim a queue
+ * item, contact OpenAI, reserve budget, or change directory data.
+ *
+ * @return true|WP_Error
+ */
+function nwmd_directory_sync_operator_automation_schedule() {
+
+    $cleared =
+        nwmd_directory_clear_operator_automation_schedule();
+
+    if (is_wp_error($cleared)) {
+        return $cleared;
+    }
+
+    $settings =
+        nwmd_directory_get_operator_automation_settings();
+
+    $budget =
+        nwmd_directory_get_operator_budget_settings();
+
+    if (
+        empty($settings['enabled'])
+        || !empty($budget['test_mode'])
+    ) {
+        return true;
+    }
+
+    $scheduled = wp_schedule_event(
+        nwmd_directory_get_next_operator_automation_timestamp(
+            $settings
+        ),
+        'weekly',
+        nwmd_directory_get_operator_automation_hook(),
+        [],
+        true
+    );
+
+    if (is_wp_error($scheduled)) {
+        return nwmd_directory_record_operator_schedule_error(
+            $scheduled->get_error_message()
+        );
+    }
+
+    if (true !== $scheduled) {
+        return nwmd_directory_record_operator_schedule_error(
+            __(
+                'The controlled weekly heartbeat could not be scheduled.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    return true;
+}
+
+/**
+ * Ensure scheduler state matches the saved settings.
+ */
+function nwmd_directory_maybe_sync_operator_automation_schedule() {
+
+    $settings =
+        nwmd_directory_get_operator_automation_settings();
+
+    $budget =
+        nwmd_directory_get_operator_budget_settings();
+
+    $next = wp_next_scheduled(
+        nwmd_directory_get_operator_automation_hook()
+    );
+
+    $should_run = (
+        !empty($settings['enabled'])
+        && empty($budget['test_mode'])
+    );
+
+    if ($should_run && false === $next) {
+        nwmd_directory_sync_operator_automation_schedule();
+        return;
+    }
+
+    if (!$should_run && false !== $next) {
+        nwmd_directory_clear_operator_automation_schedule();
+    }
+}
+
+add_action(
+    'init',
+    'nwmd_directory_maybe_sync_operator_automation_schedule',
+    30
+);
+
+/**
+ * Rebuild the heartbeat after automation settings change.
+ */
+function nwmd_directory_handle_operator_automation_settings_change() {
+
+    nwmd_directory_sync_operator_automation_schedule();
+}
+
+add_action(
+    'update_option_nwmd_directory_operator_automation',
+    'nwmd_directory_handle_operator_automation_settings_change',
+    10,
+    3
+);
+
+add_action(
+    'add_option_nwmd_directory_operator_automation',
+    'nwmd_directory_handle_operator_automation_settings_change',
+    10,
+    2
+);
+
+/**
+ * Record one no-cost scheduler heartbeat.
+ *
+ * This function does not claim queue records, call OpenAI, reserve
+ * budget, create drafts, publish records, create Deals, change
+ * rankings, or complete checkpoints.
+ */
+function nwmd_directory_handle_operator_automation_heartbeat() {
+
+    $settings =
+        nwmd_directory_get_operator_automation_settings();
+
+    $budget =
+        nwmd_directory_get_operator_budget_settings();
+
+    if (
+        empty($settings['enabled'])
+        || !empty($budget['test_mode'])
+    ) {
+        nwmd_directory_clear_operator_automation_schedule();
+        return;
+    }
+
+    nwmd_directory_update_operator_automation_status(
+        [
+            'last_attempt_at' => current_time('mysql'),
+            'last_result'     => __(
+                'Scheduler heartbeat completed. Automatic queue execution is not installed in version 0.1.89.',
+                'local-directory-framework'
+            ),
+            'last_error'      => '',
+        ]
+    );
+}
+
+add_action(
+    'nwmd_directory_operator_automation_heartbeat',
+    'nwmd_directory_handle_operator_automation_heartbeat'
+);
+
+/**
  * Format one stored automation date.
  *
  * @param string $value Stored MySQL date.
@@ -285,8 +565,8 @@ function nwmd_directory_format_operator_automation_date(
 /**
  * Render controlled automation settings and health.
  *
- * Version 0.1.88 adds configuration and health visibility only.
- * No scheduled execution is installed by this milestone.
+ * Version 0.1.89 adds configuration, health visibility, and a no-cost weekly scheduler heartbeat.
+ * Automatic queue execution is not installed by this milestone.
  */
 function nwmd_directory_render_operator_automation_section() {
 
@@ -298,6 +578,10 @@ function nwmd_directory_render_operator_automation_section() {
 
     $budget =
         nwmd_directory_get_operator_budget_settings();
+
+    $next_timestamp = wp_next_scheduled(
+        nwmd_directory_get_operator_automation_hook()
+    );
 
     $weekdays = [
         0 => __('Sunday', 'local-directory-framework'),
@@ -324,14 +608,14 @@ function nwmd_directory_render_operator_automation_section() {
             <strong>
                 <?php
                 echo esc_html__(
-                    'Dashboard setup only.',
+                    'Scheduler foundation only.',
                     'local-directory-framework'
                 );
                 ?>
             </strong>
             <?php
             echo esc_html__(
-                'Automatic queue processing is not installed or active in this version. Saving these settings does not contact OpenAI, spend budget, claim a checkpoint, or change directory data.',
+                'A no-cost weekly heartbeat scheduler is installed. It does not contact OpenAI, spend budget, claim a checkpoint, create drafts, publish records, create Deals, change rankings, or complete checkpoints.',
                 'local-directory-framework'
             );
             ?>
@@ -391,8 +675,35 @@ function nwmd_directory_render_operator_automation_section() {
                 <td>
                     <?php
                     echo esc_html__(
-                        'Not installed in this milestone',
+                        'Installed: no-cost heartbeat only',
                         'local-directory-framework'
+                    );
+                    ?>
+                </td>
+            </tr>
+
+            <tr>
+                <th scope="row">
+                    <?php
+                    echo esc_html__(
+                        'Next scheduled heartbeat',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </th>
+                <td>
+                    <?php
+                    echo esc_html(
+                        $next_timestamp
+                            ? wp_date(
+                                'M j, Y g:i a',
+                                $next_timestamp,
+                                wp_timezone()
+                            )
+                            : __(
+                                'Not scheduled',
+                                'local-directory-framework'
+                            )
                     );
                     ?>
                 </td>
@@ -582,7 +893,7 @@ function nwmd_directory_render_operator_automation_section() {
                             >
                             <?php
                             echo esc_html__(
-                                'Prepare this site for one controlled weekly operator run.',
+                                'Schedule one no-cost controlled heartbeat each week.',
                                 'local-directory-framework'
                             );
                             ?>
@@ -591,7 +902,7 @@ function nwmd_directory_render_operator_automation_section() {
                         <p class="description">
                             <?php
                             echo esc_html__(
-                                'This setting is stored now, but no scheduled execution exists in version 0.1.88.',
+                                'Version 0.1.89 schedules a heartbeat only. Automatic queue execution and paid research remain unavailable.',
                                 'local-directory-framework'
                             );
                             ?>

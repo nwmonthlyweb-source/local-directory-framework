@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Local Directory Framework
  * Description: Structured local business directory, monthly rankings, business requests, and advertising management.
- * Version: 0.1.88
+ * Version: 0.1.89
  * Author: NW Monthly
  * Text Domain: local-directory-framework
  */
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('NWMD_DIRECTORY_VERSION', '0.1.88');
+define('NWMD_DIRECTORY_VERSION', '0.1.89');
 define('NWMD_DIRECTORY_PATH', plugin_dir_path(__FILE__));
 define('NWMD_DIRECTORY_URL', plugin_dir_url(__FILE__));
 
@@ -77,6 +77,14 @@ function nwmd_directory_activate() {
 
     flush_rewrite_rules();
 
+    if (
+        function_exists(
+            'nwmd_directory_sync_operator_automation_schedule'
+        )
+    ) {
+        nwmd_directory_sync_operator_automation_schedule();
+    }
+
     update_option(
         'nwmd_directory_version',
         NWMD_DIRECTORY_VERSION,
@@ -87,6 +95,25 @@ function nwmd_directory_activate() {
 register_activation_hook(
     __FILE__,
     'nwmd_directory_activate'
+);
+
+/**
+ * Clear scheduled plugin events on deactivation.
+ */
+function nwmd_directory_deactivate() {
+
+    if (
+        function_exists(
+            'nwmd_directory_clear_operator_automation_schedule'
+        )
+    ) {
+        nwmd_directory_clear_operator_automation_schedule();
+    }
+}
+
+register_deactivation_hook(
+    __FILE__,
+    'nwmd_directory_deactivate'
 );
 
 /**
