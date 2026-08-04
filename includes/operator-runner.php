@@ -1178,6 +1178,48 @@ function nwmd_directory_release_current_operator_checkpoint() {
                 true
             );
 
+            if (is_object($run)) {
+                $run_summary = json_decode(
+                    (string) ($run->result_summary ?? ''),
+                    true
+                );
+
+                $draft_creation = is_array($run_summary)
+                    && isset($run_summary['draft_creation'])
+                    && is_array(
+                        $run_summary['draft_creation']
+                    )
+                        ? $run_summary['draft_creation']
+                        : [];
+
+                $has_created_drafts =
+                    absint($run->businesses_created ?? 0) > 0
+                    || absint(
+                        $checkpoint->businesses_created ?? 0
+                    ) > 0
+                    || (
+                        'created' === (string) (
+                            $draft_creation['status'] ?? ''
+                        )
+                        && absint(
+                            $draft_creation['business_count']
+                                ?? 0
+                        ) > 0
+                    );
+
+                if ($has_created_drafts) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return new WP_Error(
+                        'nwmd_operator_release_drafts_exist',
+                        __(
+                            'This checkpoint has created Business drafts and cannot be released. Review the drafts and complete the checkpoint instead.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
+            }
+
             $checkpoint_updated = $wpdb->query(
                 $wpdb->prepare(
                     "UPDATE {$tables['specialties']}
@@ -1210,14 +1252,50 @@ function nwmd_directory_release_current_operator_checkpoint() {
             }
 
             if (is_object($run)) {
+                $release_summary = isset($run->result_summary)
+                    ? (string) $run->result_summary
+                    : '';
+
+                $decoded_summary = json_decode(
+                    $release_summary,
+                    true
+                );
+
+                if (is_array($decoded_summary)) {
+                    $decoded_summary['release'] = [
+                        'release_version' => 1,
+                        'status'          => 'cancelled',
+                        'released_at'     => $now,
+                        'released_by'     => get_current_user_id(),
+                        'reason'          =>
+                            'Checkpoint released back to pending.',
+                    ];
+
+                    $encoded_summary = wp_json_encode(
+                        $decoded_summary,
+                        JSON_UNESCAPED_SLASHES
+                    );
+
+                    if (
+                        is_string($encoded_summary)
+                        && '' !== $encoded_summary
+                    ) {
+                        $release_summary = $encoded_summary;
+                    }
+                }
+
+                if ('' === trim($release_summary)) {
+                    $release_summary = __(
+                        'Checkpoint released back to pending. No business or Deal data was changed.',
+                        'local-directory-framework'
+                    );
+                }
+
                 $run_updated = $wpdb->update(
                     $tables['runs'],
                     [
                         'status'         => 'cancelled',
-                        'result_summary' => __(
-                            'Checkpoint released back to pending. No business or Deal data was changed.',
-                            'local-directory-framework'
-                        ),
+                        'result_summary' => $release_summary,
                         'error_message'  => '',
                         'completed_at'   => $now,
                         'updated_at'     => $now,
