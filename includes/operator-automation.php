@@ -465,7 +465,7 @@ add_action(
 );
 
 /**
- * Rebuild the heartbeat after automation settings change.
+ * Rebuild the heartbeat after relevant settings change.
  */
 function nwmd_directory_handle_operator_automation_settings_change() {
 
@@ -481,6 +481,20 @@ add_action(
 
 add_action(
     'add_option_nwmd_directory_operator_automation',
+    'nwmd_directory_handle_operator_automation_settings_change',
+    10,
+    2
+);
+
+add_action(
+    'update_option_nwmd_directory_operator_budget',
+    'nwmd_directory_handle_operator_automation_settings_change',
+    10,
+    3
+);
+
+add_action(
+    'add_option_nwmd_directory_operator_budget',
     'nwmd_directory_handle_operator_automation_settings_change',
     10,
     2
