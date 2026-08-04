@@ -680,6 +680,125 @@ function nwmd_directory_get_operator_automation_research_plan() {
 }
 
 /**
+ * Execute one controlled automated research plan.
+ *
+ * This function may claim or resume one checkpoint, create or resume its
+ * operator run, reserve guarded budget, and contact OpenAI once. It does not
+ * create Business drafts, publish records, create Deals, change rankings, or
+ * complete the checkpoint.
+ *
+ * This function is not connected to the scheduler yet.
+ *
+ * @return array|WP_Error
+ */
+function nwmd_directory_run_operator_automation_research() {
+
+    $required_functions = [
+        'nwmd_directory_get_operator_automation_research_plan',
+        'nwmd_directory_claim_next_operator_checkpoint',
+        'nwmd_directory_run_operator_research_preview',
+    ];
+
+    foreach ($required_functions as $required_function) {
+        if (!function_exists($required_function)) {
+            return new WP_Error(
+                'nwmd_operator_automation_execution_unavailable',
+                __(
+                    'One or more required automated research functions are unavailable.',
+                    'local-directory-framework'
+                )
+            );
+        }
+    }
+
+    $plan =
+        nwmd_directory_get_operator_automation_research_plan();
+
+    if (is_wp_error($plan)) {
+        return $plan;
+    }
+
+    $action = sanitize_key(
+        (string) ($plan['action'] ?? '')
+    );
+
+    if ('awaiting_review' === $action) {
+        return [
+            'action'             => 'awaiting_review',
+            'research_performed' => false,
+            'run_id'             =>
+                absint($plan['run_id'] ?? 0),
+        ];
+    }
+
+    if ('claim_and_research' === $action) {
+        $context =
+            nwmd_directory_claim_next_operator_checkpoint();
+
+        if (is_wp_error($context)) {
+            return $context;
+        }
+    } elseif ('resume_and_research' === $action) {
+        $context = isset($plan['context'])
+            && is_array($plan['context'])
+                ? $plan['context']
+                : [];
+    } else {
+        return new WP_Error(
+            'nwmd_operator_automation_action_invalid',
+            __(
+                'The automated research plan returned an unsupported action.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $run_id = absint(
+        $context['run_id']
+            ?? $plan['run_id']
+            ?? 0
+    );
+
+    if ($run_id < 1) {
+        return new WP_Error(
+            'nwmd_operator_automation_run_missing',
+            __(
+                'The automated research checkpoint does not have a valid run.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $result =
+        nwmd_directory_run_operator_research_preview(
+            'automated'
+        );
+
+    if (is_wp_error($result)) {
+        return $result;
+    }
+
+    return array_merge(
+        $result,
+        [
+            'research_performed' => true,
+            'run_id'             => $run_id,
+            'checkpoint_action'  =>
+                sanitize_key(
+                    (string) (
+                        $context['action']
+                            ?? (
+                                'claim_and_research' === $action
+                                    ? 'started'
+                                    : 'resumed'
+                            )
+                    )
+                ),
+        ]
+    );
+}
+
+/**
  * Record one no-cost scheduler heartbeat.
  *
  * This function does not claim queue records, call OpenAI, reserve
