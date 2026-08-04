@@ -702,14 +702,74 @@ function nwmd_directory_handle_operator_automation_heartbeat() {
         return;
     }
 
+    $now  = current_time('mysql');
+    $plan =
+        nwmd_directory_get_operator_automation_research_plan();
+
+    if (is_wp_error($plan)) {
+        nwmd_directory_update_operator_automation_status(
+            [
+                'last_attempt_at' => $now,
+                'last_error_at'   => $now,
+                'last_result'     => __(
+                    'Automation planning stopped safely.',
+                    'local-directory-framework'
+                ),
+                'last_error'      =>
+                    $plan->get_error_message(),
+            ]
+        );
+
+        return;
+    }
+
+    $action = sanitize_key(
+        (string) ($plan['action'] ?? '')
+    );
+
+    $messages = [
+        'awaiting_review'     => __(
+            'The active research preview is awaiting supervised review.',
+            'local-directory-framework'
+        ),
+        'resume_and_research' => __(
+            'The active checkpoint is eligible for controlled automated research.',
+            'local-directory-framework'
+        ),
+        'claim_and_research'  => __(
+            'The next pending checkpoint is eligible for controlled automated research.',
+            'local-directory-framework'
+        ),
+    ];
+
+    if (!isset($messages[$action])) {
+        nwmd_directory_update_operator_automation_status(
+            [
+                'last_attempt_at' => $now,
+                'last_error_at'   => $now,
+                'last_result'     => __(
+                    'Automation planning stopped safely.',
+                    'local-directory-framework'
+                ),
+                'last_error'      => __(
+                    'The automation planner returned an unsupported action.',
+                    'local-directory-framework'
+                ),
+            ]
+        );
+
+        return;
+    }
+
     nwmd_directory_update_operator_automation_status(
         [
-            'last_attempt_at' => current_time('mysql'),
-            'last_result'     => __(
-                'Scheduler heartbeat completed. Automatic queue execution is not installed in version 0.1.91.',
-                'local-directory-framework'
-            ),
+            'last_attempt_at' => $now,
+            'last_error_at'   => '',
+            'last_result'     => $messages[$action],
             'last_error'      => '',
+            'last_run_id'     => absint(
+                $plan['run_id'] ?? 0
+            ),
         ]
     );
 }
