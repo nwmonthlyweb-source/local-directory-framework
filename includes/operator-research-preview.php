@@ -1571,6 +1571,17 @@ function nwmd_directory_render_operator_research_preview_section() {
         nwmd_directory_render_operator_research_preview_result(
             $preview
         );
+
+        if (
+            function_exists(
+                'nwmd_directory_render_operator_preview_validation_section'
+            )
+        ) {
+            nwmd_directory_render_operator_preview_validation_section(
+                $run_id,
+                $preview
+            );
+        }
         ?>
         <p>
             <strong>
