@@ -487,6 +487,185 @@ add_action(
 );
 
 /**
+ * Build one no-cost plan for controlled automated research.
+ *
+ * This function does not claim a checkpoint, create a run, contact OpenAI,
+ * reserve budget, create drafts, publish records, create Deals, change
+ * rankings, or complete checkpoints.
+ *
+ * @return array|WP_Error
+ */
+function nwmd_directory_get_operator_automation_research_plan() {
+
+    $required_functions = [
+        'nwmd_directory_get_operator_automation_settings',
+        'nwmd_directory_get_operator_budget_settings',
+        'nwmd_directory_get_operator_storage_status',
+        'nwmd_directory_get_openai_configuration_status',
+        'nwmd_directory_validate_single_active_checkpoint',
+        'nwmd_directory_get_current_operator_checkpoint_context',
+        'nwmd_directory_operator_run_has_research_preview',
+        'nwmd_directory_get_operator_checkpoint_counts',
+        'nwmd_directory_can_reserve_operator_usage',
+    ];
+
+    foreach ($required_functions as $required_function) {
+        if (!function_exists($required_function)) {
+            return new WP_Error(
+                'nwmd_operator_automation_plan_unavailable',
+                __(
+                    'One or more required automation planning functions are unavailable.',
+                    'local-directory-framework'
+                )
+            );
+        }
+    }
+
+    $settings =
+        nwmd_directory_get_operator_automation_settings();
+
+    if (empty($settings['enabled'])) {
+        return new WP_Error(
+            'nwmd_operator_automation_plan_disabled',
+            __(
+                'Controlled automation is disabled.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $budget =
+        nwmd_directory_get_operator_budget_settings();
+
+    if (!empty($budget['test_mode'])) {
+        return new WP_Error(
+            'nwmd_operator_automation_plan_test_mode',
+            __(
+                'Controlled automation is unavailable while supervised test mode is enabled.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $storage =
+        nwmd_directory_get_operator_storage_status();
+
+    if (empty($storage['ready'])) {
+        return new WP_Error(
+            'nwmd_operator_automation_plan_storage_incomplete',
+            __(
+                'Operator storage is incomplete.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $configuration =
+        nwmd_directory_get_openai_configuration_status();
+
+    if (empty($configuration['configured'])) {
+        return new WP_Error(
+            'nwmd_operator_automation_plan_openai_missing',
+            __(
+                'OpenAI is not configured.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if (
+        'gpt-5.6-terra'
+        !== (string) ($configuration['model'] ?? '')
+    ) {
+        return new WP_Error(
+            'nwmd_operator_automation_plan_model_unsupported',
+            __(
+                'Controlled automated research currently requires gpt-5.6-terra.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $valid =
+        nwmd_directory_validate_single_active_checkpoint();
+
+    if (is_wp_error($valid)) {
+        return $valid;
+    }
+
+    $context =
+        nwmd_directory_get_current_operator_checkpoint_context();
+
+    $run_id = absint($context['run_id'] ?? 0);
+
+    if (!empty($context)) {
+        if ($run_id < 1) {
+            return new WP_Error(
+                'nwmd_operator_automation_plan_run_missing',
+                __(
+                    'The active checkpoint does not have a valid started run.',
+                    'local-directory-framework'
+                )
+            );
+        }
+
+        if (
+            nwmd_directory_operator_run_has_research_preview(
+                $run_id
+            )
+        ) {
+            return [
+                'action'               => 'awaiting_review',
+                'claim_required'       => false,
+                'research_required'    => false,
+                'run_id'               => $run_id,
+                'planned_cost_micros'  => 0,
+                'context'              => $context,
+            ];
+        }
+
+        $action         = 'resume_and_research';
+        $claim_required = false;
+    } else {
+        $counts =
+            nwmd_directory_get_operator_checkpoint_counts();
+
+        if (absint($counts['pending'] ?? 0) < 1) {
+            return new WP_Error(
+                'nwmd_operator_automation_plan_queue_empty',
+                __(
+                    'No pending specialty checkpoints remain.',
+                    'local-directory-framework'
+                )
+            );
+        }
+
+        $action         = 'claim_and_research';
+        $claim_required = true;
+    }
+
+    $planned_cost_micros = 250000;
+
+    $eligible =
+        nwmd_directory_can_reserve_operator_usage(
+            $planned_cost_micros
+        );
+
+    if (is_wp_error($eligible)) {
+        return $eligible;
+    }
+
+    return [
+        'action'               => $action,
+        'claim_required'       => $claim_required,
+        'research_required'    => true,
+        'run_id'               => $run_id,
+        'planned_cost_micros'  => $planned_cost_micros,
+        'context'              => $context,
+    ];
+}
+
+/**
  * Record one no-cost scheduler heartbeat.
  *
  * This function does not claim queue records, call OpenAI, reserve
