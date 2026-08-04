@@ -1271,6 +1271,47 @@ function nwmd_directory_run_operator_research_preview() {
         return $preview;
     }
 
+    global $wpdb;
+
+    $usage_data = [
+        'response_id'          =>
+            sanitize_text_field(
+                (string) ($decoded['id'] ?? '')
+            ),
+        'model'                => $model,
+        'input_tokens'         => $input_tokens,
+        'cached_input_tokens'  =>
+            $cached_input_tokens,
+        'output_tokens'        => $output_tokens,
+        'web_search_calls'     => $web_search_calls,
+        'recorded_cost_micros' =>
+            $recorded_cost_micros,
+    ];
+
+    if (false === $wpdb->query('START TRANSACTION')) {
+        $transaction_error = new WP_Error(
+            'nwmd_operator_preview_transaction_failed',
+            __(
+                'The research preview could not start a safe database transaction.',
+                'local-directory-framework'
+            )
+        );
+
+        nwmd_directory_record_operator_preview_usage_error(
+            $request_uuid,
+            array_merge(
+                $usage_data,
+                [
+                    'status'        => 'error',
+                    'error_message' =>
+                        $transaction_error->get_error_message(),
+                ]
+            )
+        );
+
+        return $transaction_error;
+    }
+
     $saved = nwmd_directory_save_operator_research_preview(
         $run_id,
         [
@@ -1296,25 +1337,18 @@ function nwmd_directory_run_operator_research_preview() {
     );
 
     if (is_wp_error($saved)) {
+        nwmd_directory_rollback_operator_transaction();
+
         nwmd_directory_record_operator_preview_usage_error(
             $request_uuid,
-            [
-                'response_id'          =>
-                    sanitize_text_field(
-                        (string) ($decoded['id'] ?? '')
-                    ),
-                'model'                => $model,
-                'status'               => 'error',
-                'input_tokens'         => $input_tokens,
-                'cached_input_tokens'  =>
-                    $cached_input_tokens,
-                'output_tokens'        => $output_tokens,
-                'web_search_calls'     => $web_search_calls,
-                'recorded_cost_micros' =>
-                    $recorded_cost_micros,
-                'error_message'        =>
-                    $saved->get_error_message(),
-            ]
+            array_merge(
+                $usage_data,
+                [
+                    'status'        => 'error',
+                    'error_message' =>
+                        $saved->get_error_message(),
+                ]
+            )
         );
 
         return $saved;
@@ -1322,25 +1356,56 @@ function nwmd_directory_run_operator_research_preview() {
 
     $usage_completed = nwmd_directory_update_operator_usage(
         $request_uuid,
-        [
-            'response_id'          =>
-                sanitize_text_field(
-                    (string) ($decoded['id'] ?? '')
-                ),
-            'model'                => $model,
-            'status'               => 'complete',
-            'input_tokens'         => $input_tokens,
-            'cached_input_tokens'  =>
-                $cached_input_tokens,
-            'output_tokens'        => $output_tokens,
-            'web_search_calls'     => $web_search_calls,
-            'recorded_cost_micros' =>
-                $recorded_cost_micros,
-        ]
+        array_merge(
+            $usage_data,
+            [
+                'status' => 'complete',
+            ]
+        )
     );
 
     if (is_wp_error($usage_completed)) {
+        nwmd_directory_rollback_operator_transaction();
+
+        nwmd_directory_record_operator_preview_usage_error(
+            $request_uuid,
+            array_merge(
+                $usage_data,
+                [
+                    'status'        => 'error',
+                    'error_message' =>
+                        $usage_completed->get_error_message(),
+                ]
+            )
+        );
+
         return $usage_completed;
+    }
+
+    if (false === $wpdb->query('COMMIT')) {
+        nwmd_directory_rollback_operator_transaction();
+
+        $commit_error = new WP_Error(
+            'nwmd_operator_preview_commit_failed',
+            __(
+                'The research preview and usage record could not be committed safely.',
+                'local-directory-framework'
+            )
+        );
+
+        nwmd_directory_record_operator_preview_usage_error(
+            $request_uuid,
+            array_merge(
+                $usage_data,
+                [
+                    'status'        => 'error',
+                    'error_message' =>
+                        $commit_error->get_error_message(),
+                ]
+            )
+        );
+
+        return $commit_error;
     }
 
     return [
