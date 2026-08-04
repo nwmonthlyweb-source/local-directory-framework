@@ -455,6 +455,14 @@ function nwmd_directory_render_operator_admin_page() {
             ) {
                 nwmd_directory_render_operator_budget_section();
             }
+
+            if (
+                function_exists(
+                    'nwmd_directory_render_operator_budget_test_section'
+                )
+            ) {
+                nwmd_directory_render_operator_budget_test_section();
+            }
             ?>
             <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
