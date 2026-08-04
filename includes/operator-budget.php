@@ -760,6 +760,137 @@ function nwmd_directory_update_operator_usage(
 }
 
 /**
+ * Resolve stale started preview usage as an uncertain failed request.
+ *
+ * The reserved and recorded cost values are preserved. This action does not
+ * refund guarded budget, release checkpoints, or change directory records.
+ *
+ * @return array|WP_Error
+ */
+function nwmd_directory_resolve_stale_operator_preview_usage() {
+
+    return nwmd_directory_with_operator_lock(
+        function () {
+
+            global $wpdb;
+
+            $storage = nwmd_directory_get_operator_storage_status();
+
+            if (empty($storage['ready'])) {
+                return new WP_Error(
+                    'nwmd_operator_storage_incomplete',
+                    __(
+                        'Operator storage is incomplete.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $tables      = nwmd_directory_get_operator_table_names();
+            $usage_table = isset($tables['usage'])
+                ? (string) $tables['usage']
+                : '';
+
+            if (
+                '' === $usage_table
+                || !nwmd_directory_operator_table_exists($usage_table)
+            ) {
+                return new WP_Error(
+                    'nwmd_operator_usage_table_missing',
+                    __(
+                        'The operator usage ledger is unavailable.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $now = current_time('mysql');
+
+            $threshold = current_datetime()
+                ->modify('-15 minutes')
+                ->format('Y-m-d H:i:s');
+
+            if (false === $wpdb->query('START TRANSACTION')) {
+                return new WP_Error(
+                    'nwmd_operator_transaction_failed',
+                    __(
+                        'The operator could not start a database transaction.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            $resolved = $wpdb->query(
+                $wpdb->prepare(
+                    "UPDATE {$usage_table}
+                    SET
+                        status = %s,
+                        error_message = %s,
+                        completed_at = %s,
+                        updated_at = %s
+                    WHERE status = %s
+                        AND operation_type = %s
+                        AND started_at IS NOT NULL
+                        AND started_at < %s",
+                    'error',
+                    'The research preview remained in progress beyond the recovery window. Its guarded cost reservation was preserved for manual review.',
+                    $now,
+                    $now,
+                    'started',
+                    'research_preview',
+                    $threshold
+                )
+            );
+
+            if (false === $resolved) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_stale_usage_resolution_failed',
+                    __(
+                        'The stale preview usage records could not be resolved safely.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            if (false === $wpdb->query('COMMIT')) {
+                nwmd_directory_rollback_operator_transaction();
+
+                return new WP_Error(
+                    'nwmd_operator_commit_failed',
+                    __(
+                        'The stale preview usage resolution could not be committed.',
+                        'local-directory-framework'
+                    )
+                );
+            }
+
+            return [
+                'action'         => 'stale_usage_resolved',
+                'resolved_count' => absint($resolved),
+            ];
+        }
+    );
+}
+
+/**
+ * Handle the guarded stale-preview recovery action.
+ */
+function nwmd_directory_handle_operator_stale_usage_resolution() {
+
+    nwmd_directory_process_operator_admin_action(
+        'nwmd_directory_operator_resolve_stale_usage',
+        'nwmd_directory_resolve_stale_operator_preview_usage'
+    );
+}
+
+add_action(
+    'admin_post_nwmd_directory_operator_resolve_stale_usage',
+    'nwmd_directory_handle_operator_stale_usage_resolution'
+);
+
+/**
  * Render Data Operator research safeguards.
  */
 function nwmd_directory_render_operator_budget_section() {
@@ -808,8 +939,8 @@ function nwmd_directory_render_operator_budget_section() {
                 echo esc_html(
                     sprintf(
                         _n(
-                            '%s research preview usage record has remained in progress for more than 15 minutes. It still counts against the guarded budget and weekly limit. Do not run another paid preview until it is reviewed.',
-                            '%s research preview usage records have remained in progress for more than 15 minutes. They still count against the guarded budget and weekly limit. Do not run another paid preview until they are reviewed.',
+                            '%s research preview usage record has remained in progress for more than 15 minutes. It still counts against the guarded budget and weekly limit.',
+                            '%s research preview usage records have remained in progress for more than 15 minutes. They still count against the guarded budget and weekly limit.',
                             $stale_usage_count,
                             'local-directory-framework'
                         ),
@@ -818,6 +949,36 @@ function nwmd_directory_render_operator_budget_section() {
                 );
                 ?>
             </p>
+
+            <form
+                method="post"
+                action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+            >
+                <input
+                    type="hidden"
+                    name="action"
+                    value="nwmd_directory_operator_resolve_stale_usage"
+                >
+
+                <?php
+                wp_nonce_field(
+                    'nwmd_directory_operator_resolve_stale_usage'
+                );
+
+                submit_button(
+                    __(
+                        'Resolve Stale Usage as Error',
+                        'local-directory-framework'
+                    ),
+                    'secondary',
+                    'submit',
+                    false,
+                    [
+                        'onclick' => "return confirm('Mark every research preview that has remained started for more than 15 minutes as an error? Guarded budget will remain reserved and no directory records will be changed.');",
+                    ]
+                );
+                ?>
+            </form>
         </div>
     <?php endif; ?>
 

@@ -789,6 +789,99 @@ function nwmd_directory_prepare_operator_completion_summary(
         );
     }
 
+    $run_id = absint($run->id ?? 0);
+
+    $preview =
+        nwmd_directory_get_operator_research_preview_result(
+            $run_id
+        );
+
+    if (empty($preview)) {
+        return new WP_Error(
+            'nwmd_operator_completion_preview_missing',
+            __(
+                'A completed supervised research preview is required before this checkpoint can be completed.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $businesses = isset($preview['businesses'])
+        && is_array($preview['businesses'])
+            ? array_values($preview['businesses'])
+            : [];
+
+    $preview_count = count($businesses);
+
+    $validation = isset($preview['duplicate_validation'])
+        && is_array($preview['duplicate_validation'])
+            ? $preview['duplicate_validation']
+            : [];
+
+    if (empty($validation)) {
+        return new WP_Error(
+            'nwmd_operator_completion_validation_missing',
+            __(
+                'Complete the supervised duplicate review before completing this checkpoint.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $validation_rows = isset($validation['businesses'])
+        && is_array($validation['businesses'])
+            ? array_values($validation['businesses'])
+            : [];
+
+    $validation_totals = isset($validation['totals'])
+        && is_array($validation['totals'])
+            ? $validation['totals']
+            : [];
+
+    $ready_count = absint(
+        $validation_totals['ready_for_draft'] ?? 0
+    );
+
+    $review_count = absint(
+        $validation_totals['review_required'] ?? 0
+    );
+
+    $blocked_count = absint(
+        $validation_totals['blocked_duplicate'] ?? 0
+    );
+
+    if (
+        count($validation_rows) !== $preview_count
+        || (
+            $ready_count
+            + $review_count
+            + $blocked_count
+        ) !== $preview_count
+    ) {
+        return new WP_Error(
+            'nwmd_operator_completion_validation_mismatch',
+            __(
+                'The stored duplicate-review counts do not match the research preview.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if (
+        $review_count > 0
+        || $blocked_count > 0
+        || $ready_count !== $preview_count
+        || $run_count !== $preview_count
+    ) {
+        return new WP_Error(
+            'nwmd_operator_completion_not_ready',
+            __(
+                'Every researched business must pass duplicate review and exist as a supervised draft before completion.',
+                'local-directory-framework'
+            )
+        );
+    }
+
     $raw_summary = isset($run->result_summary)
         ? (string) $run->result_summary
         : '';
@@ -1179,6 +1272,45 @@ function nwmd_directory_release_current_operator_checkpoint() {
             );
 
             if (is_object($run)) {
+                $started_usage_found = $wpdb->query(
+                    $wpdb->prepare(
+                        "SELECT id
+                        FROM {$tables['usage']}
+                        WHERE run_id = %d
+                            AND operation_type = %s
+                            AND status = %s
+                        LIMIT 1
+                        FOR UPDATE",
+                        absint($run->id),
+                        'research_preview',
+                        'started'
+                    )
+                );
+
+                if (false === $started_usage_found) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return new WP_Error(
+                        'nwmd_operator_started_usage_check_failed',
+                        __(
+                            'The active research-preview usage state could not be verified safely.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
+
+                if ($started_usage_found > 0) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return new WP_Error(
+                        'nwmd_operator_release_preview_started',
+                        __(
+                            'This checkpoint has a research preview still marked in progress. Wait for it to finish, or use the stale-usage recovery control after 15 minutes.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
+
                 $run_summary = json_decode(
                     (string) ($run->result_summary ?? ''),
                     true
