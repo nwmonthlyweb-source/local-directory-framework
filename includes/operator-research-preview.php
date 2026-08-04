@@ -1582,6 +1582,16 @@ function nwmd_directory_render_operator_research_preview_section() {
                 $preview
             );
         }
+        if (
+            function_exists(
+                'nwmd_directory_render_operator_draft_approval_section'
+            )
+        ) {
+            nwmd_directory_render_operator_draft_approval_section(
+                $run_id,
+                $preview
+            );
+        }
         ?>
         <p>
             <strong>
@@ -1594,7 +1604,7 @@ function nwmd_directory_render_operator_research_preview_section() {
             </strong>
             <?php
             echo esc_html__(
-                'Do not complete this checkpoint. The next plugin version will validate the preview against existing WordPress records before any drafts can be created.',
+                'Do not complete this checkpoint yet. Create and review the supervised Business drafts before completion.',
                 'local-directory-framework'
             );
             ?>
