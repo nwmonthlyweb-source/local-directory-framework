@@ -958,6 +958,23 @@ function nwmd_directory_render_operator_budget_section() {
                     ?>
                 </td>
             </tr>
+            <tr>
+                <th scope="row">
+                    <?php
+                    echo esc_html__(
+                        'Stale preview usage records',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </th>
+                <td>
+                    <?php
+                    echo esc_html(
+                        number_format_i18n($stale_usage_count)
+                    );
+                    ?>
+                </td>
+            </tr>
         </tbody>
     </table>
 
