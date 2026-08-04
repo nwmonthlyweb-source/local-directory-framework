@@ -314,6 +314,61 @@ function nwmd_directory_get_operator_usage_summary(
 }
 
 /**
+ * Return started preview usage records older than the safe window.
+ *
+ * This function reports stale records only. It does not modify usage data.
+ *
+ * @param int $minutes Stale threshold in minutes.
+ *
+ * @return int
+ */
+function nwmd_directory_get_stale_operator_usage_count(
+    $minutes = 15
+) {
+
+    global $wpdb;
+
+    $minutes = max(1, absint($minutes));
+
+    $tables      = nwmd_directory_get_operator_table_names();
+    $usage_table = isset($tables['usage'])
+        ? (string) $tables['usage']
+        : '';
+
+    if (
+        '' === $usage_table
+        || !nwmd_directory_operator_table_exists($usage_table)
+    ) {
+        return 0;
+    }
+
+    $threshold = current_datetime()
+        ->modify(
+            sprintf(
+                '-%d minutes',
+                $minutes
+            )
+        )
+        ->format('Y-m-d H:i:s');
+
+    return absint(
+        $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*)
+                FROM {$usage_table}
+                WHERE status = %s
+                    AND operation_type = %s
+                    AND started_at IS NOT NULL
+                    AND started_at < %s",
+                'started',
+                'research_preview',
+                $threshold
+            )
+        )
+    );
+}
+
+/**
  * Return guarded research requests created this WordPress week.
  *
  * @return int
@@ -699,6 +754,8 @@ function nwmd_directory_render_operator_budget_section() {
     $settings = nwmd_directory_get_operator_budget_settings();
     $summary  = nwmd_directory_get_operator_usage_summary();
 
+    $stale_usage_count =
+        nwmd_directory_get_stale_operator_usage_count(15);
     $monthly_limit_micros =
         nwmd_directory_operator_cents_to_micros(
             $settings['monthly_budget_cents']
@@ -730,6 +787,26 @@ function nwmd_directory_render_operator_budget_section() {
             ?>
         </p>
     </div>
+
+    <?php if ($stale_usage_count > 0) : ?>
+        <div class="notice notice-error inline">
+            <p>
+                <?php
+                echo esc_html(
+                    sprintf(
+                        _n(
+                            '%s research preview usage record has remained in progress for more than 15 minutes. It still counts against the guarded budget and weekly limit. Do not run another paid preview until it is reviewed.',
+                            '%s research preview usage records have remained in progress for more than 15 minutes. They still count against the guarded budget and weekly limit. Do not run another paid preview until they are reviewed.',
+                            $stale_usage_count,
+                            'local-directory-framework'
+                        ),
+                        number_format_i18n($stale_usage_count)
+                    )
+                );
+                ?>
+            </p>
+        </div>
+    <?php endif; ?>
 
     <table class="widefat striped" style="max-width: 760px;">
         <tbody>
