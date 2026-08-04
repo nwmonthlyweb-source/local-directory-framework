@@ -15,7 +15,7 @@ function nwmd_directory_get_operator_budget_defaults() {
         'test_mode'            => 1,
         'monthly_budget_cents' => 500,
         'per_run_budget_cents' => 25,
-        'max_runs_per_day'     => 1,
+        'max_runs_per_week'    => 1,
     ];
 }
 
@@ -79,9 +79,13 @@ function nwmd_directory_sanitize_operator_budget_settings($input) {
         min($monthly_budget_cents, $per_run_budget_cents)
     );
 
-    $max_runs_per_day = isset($input['max_runs_per_day'])
-        ? absint($input['max_runs_per_day'])
-        : $defaults['max_runs_per_day'];
+    $max_runs_per_week = isset($input['max_runs_per_week'])
+        ? absint($input['max_runs_per_week'])
+        : (
+            isset($input['max_runs_per_day'])
+                ? absint($input['max_runs_per_day'])
+                : $defaults['max_runs_per_week']
+        );
 
     return [
         'test_mode'            => !empty($input['test_mode'])
@@ -89,9 +93,9 @@ function nwmd_directory_sanitize_operator_budget_settings($input) {
             : 0,
         'monthly_budget_cents' => $monthly_budget_cents,
         'per_run_budget_cents' => $per_run_budget_cents,
-        'max_runs_per_day'     => max(
+        'max_runs_per_week'    => max(
             1,
-            min(100, $max_runs_per_day)
+            min(100, $max_runs_per_week)
         ),
     ];
 }
@@ -137,6 +141,14 @@ function nwmd_directory_get_operator_budget_settings() {
         $settings = [];
     }
 
+    $max_runs_per_week = isset($settings['max_runs_per_week'])
+        ? absint($settings['max_runs_per_week'])
+        : (
+            isset($settings['max_runs_per_day'])
+                ? absint($settings['max_runs_per_day'])
+                : $defaults['max_runs_per_week']
+        );
+
     $settings = wp_parse_args($settings, $defaults);
 
     $monthly_budget_cents = max(
@@ -159,11 +171,11 @@ function nwmd_directory_get_operator_budget_settings() {
                 absint($settings['per_run_budget_cents'])
             )
         ),
-        'max_runs_per_day'     => max(
+        'max_runs_per_week'    => max(
             1,
             min(
                 100,
-                absint($settings['max_runs_per_day'])
+                $max_runs_per_week
             )
         ),
     ];
@@ -302,11 +314,11 @@ function nwmd_directory_get_operator_usage_summary(
 }
 
 /**
- * Return guarded research requests created today.
+ * Return guarded research requests created this WordPress week.
  *
  * @return int
  */
-function nwmd_directory_get_operator_usage_count_today() {
+function nwmd_directory_get_operator_usage_count_this_week() {
 
     global $wpdb;
 
@@ -322,6 +334,35 @@ function nwmd_directory_get_operator_usage_count_today() {
         return 0;
     }
 
+    $now = new DateTimeImmutable(
+        'now',
+        wp_timezone()
+    );
+
+    $start_of_week = min(
+        6,
+        absint(get_option('start_of_week', 1))
+    );
+
+    $days_since_start = (
+        absint($now->format('w'))
+        - $start_of_week
+        + 7
+    ) % 7;
+
+    $week_start = $now
+        ->setTime(0, 0, 0)
+        ->modify(
+            sprintf(
+                '-%d days',
+                $days_since_start
+            )
+        );
+
+    $week_end = $week_start
+        ->modify('+6 days')
+        ->setTime(23, 59, 59);
+
     return absint(
         $wpdb->get_var(
             $wpdb->prepare(
@@ -329,8 +370,8 @@ function nwmd_directory_get_operator_usage_count_today() {
                 FROM {$usage_table}
                 WHERE created_at BETWEEN %s AND %s
                     AND status <> %s",
-                current_time('Y-m-d 00:00:00'),
-                current_time('Y-m-d 23:59:59'),
+                $week_start->format('Y-m-d H:i:s'),
+                $week_end->format('Y-m-d H:i:s'),
                 'cancelled'
             )
         )
@@ -398,13 +439,13 @@ function nwmd_directory_can_reserve_operator_usage(
     }
 
     if (
-        nwmd_directory_get_operator_usage_count_today()
-        >= $settings['max_runs_per_day']
+        nwmd_directory_get_operator_usage_count_this_week()
+        >= $settings['max_runs_per_week']
     ) {
         return new WP_Error(
-            'nwmd_operator_daily_limit_reached',
+            'nwmd_operator_weekly_limit_reached',
             __(
-                'The daily research-run limit has been reached.',
+                'The weekly research-run limit has been reached.',
                 'local-directory-framework'
             )
         );
@@ -759,7 +800,7 @@ function nwmd_directory_render_operator_budget_section() {
                 <th scope="row">
                     <?php
                     echo esc_html__(
-                        'Maximum runs per day',
+                        'Maximum runs per week',
                         'local-directory-framework'
                     );
                     ?>
@@ -767,7 +808,7 @@ function nwmd_directory_render_operator_budget_section() {
                 <td>
                     <?php
                     echo esc_html(
-                        (string) $settings['max_runs_per_day']
+                        (string) $settings['max_runs_per_week']
                     );
                     ?>
                 </td>
@@ -935,10 +976,10 @@ function nwmd_directory_render_operator_budget_section() {
                 </tr>
                 <tr>
                     <th scope="row">
-                        <label for="nwmd-max-runs-day">
+                        <label for="nwmd-max-runs-week">
                             <?php
                             echo esc_html__(
-                                'Maximum runs per day',
+                                'Maximum runs per week',
                                 'local-directory-framework'
                             );
                             ?>
@@ -946,15 +987,15 @@ function nwmd_directory_render_operator_budget_section() {
                     </th>
                     <td>
                         <input
-                            id="nwmd-max-runs-day"
+                            id="nwmd-max-runs-week"
                             type="number"
                             min="1"
                             max="100"
                             step="1"
-                            name="nwmd_directory_operator_budget[max_runs_per_day]"
+                            name="nwmd_directory_operator_budget[max_runs_per_week]"
                             value="<?php
                                 echo esc_attr(
-                                    (string) $settings['max_runs_per_day']
+                                    (string) $settings['max_runs_per_week']
                                 );
                             ?>"
                         >
