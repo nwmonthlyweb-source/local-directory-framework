@@ -17,6 +17,7 @@ function nwmd_directory_get_operator_table_names() {
         'jobs'        => $wpdb->prefix . 'nwmd_operator_jobs',
         'specialties' => $wpdb->prefix . 'nwmd_operator_specialties',
         'runs'        => $wpdb->prefix . 'nwmd_operator_runs',
+        'usage'       => $wpdb->prefix . 'nwmd_operator_usage',
     ];
 }
 

@@ -25,6 +25,7 @@ function nwmd_directory_install_schema() {
     $operator_jobs_table        = $wpdb->prefix . 'nwmd_operator_jobs';
     $operator_specialties_table = $wpdb->prefix . 'nwmd_operator_specialties';
     $operator_runs_table        = $wpdb->prefix . 'nwmd_operator_runs';
+    $operator_usage_table       = $wpdb->prefix . 'nwmd_operator_usage';
 
     $queries = [];
 
@@ -284,6 +285,36 @@ function nwmd_directory_install_schema() {
         KEY specialty_term_id (specialty_term_id),
         KEY status (status),
         KEY started_at (started_at)
+    ) {$charset_collate};";
+
+    $queries[] = "CREATE TABLE {$operator_usage_table} (
+        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        request_uuid char(36) NOT NULL,
+        response_id varchar(191) NOT NULL DEFAULT '',
+        run_id bigint(20) unsigned NOT NULL DEFAULT 0,
+        billing_month char(7) NOT NULL DEFAULT '',
+        operation_type varchar(40) NOT NULL DEFAULT 'research',
+        model varchar(191) NOT NULL DEFAULT '',
+        status varchar(40) NOT NULL DEFAULT 'reserved',
+        input_tokens bigint(20) unsigned NOT NULL DEFAULT 0,
+        cached_input_tokens bigint(20) unsigned NOT NULL DEFAULT 0,
+        output_tokens bigint(20) unsigned NOT NULL DEFAULT 0,
+        web_search_calls int(10) unsigned NOT NULL DEFAULT 0,
+        reserved_cost_micros bigint(20) unsigned NOT NULL DEFAULT 0,
+        recorded_cost_micros bigint(20) unsigned NOT NULL DEFAULT 0,
+        error_message longtext NOT NULL,
+        created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+        started_at datetime DEFAULT NULL,
+        completed_at datetime DEFAULT NULL,
+        created_at datetime NOT NULL,
+        updated_at datetime NOT NULL,
+        PRIMARY KEY  (id),
+        UNIQUE KEY request_uuid (request_uuid),
+        KEY response_id (response_id),
+        KEY run_id (run_id),
+        KEY billing_month (billing_month),
+        KEY status (status),
+        KEY created_at (created_at)
     ) {$charset_collate};";
     foreach ($queries as $query) {
         dbDelta($query);

@@ -447,6 +447,15 @@ function nwmd_directory_render_operator_admin_page() {
                 nwmd_directory_render_openai_operator_section();
             }
             ?>
+            <?php
+            if (
+                function_exists(
+                    'nwmd_directory_render_operator_budget_section'
+                )
+            ) {
+                nwmd_directory_render_operator_budget_section();
+            }
+            ?>
             <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
             <p>
