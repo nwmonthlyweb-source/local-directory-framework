@@ -598,16 +598,28 @@ function nwmd_directory_save_operator_research_preview(
         );
     }
 
+    $encoded = wp_json_encode(
+        $preview,
+        JSON_UNESCAPED_SLASHES
+    );
+
+    if (!is_string($encoded) || '' === trim($encoded)) {
+        return new WP_Error(
+            'nwmd_operator_preview_encode_failed',
+            __(
+                'The research preview audit could not be encoded.',
+                'local-directory-framework'
+            )
+        );
+    }
+
     $tables = nwmd_directory_get_operator_table_names();
     $now    = current_time('mysql');
 
     $updated = $wpdb->update(
         $tables['runs'],
         [
-            'result_summary' => wp_json_encode(
-                $preview,
-                JSON_UNESCAPED_SLASHES
-            ),
+            'result_summary' => $encoded,
             'error_message'  => '',
             'updated_at'     => $now,
         ],
@@ -630,10 +642,36 @@ function nwmd_directory_save_operator_research_preview(
         return new WP_Error(
             'nwmd_operator_preview_save_failed',
             __(
-                'The operator run could not store the research preview.',
+                'The active operator run could not store the research preview safely.',
                 'local-directory-framework'
             )
         );
+    }
+
+    if (0 === $updated) {
+        $current = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT status, result_summary
+                FROM {$tables['runs']}
+                WHERE id = %d
+                LIMIT 1",
+                $run_id
+            )
+        );
+
+        if (
+            !is_object($current)
+            || 'started' !== (string) $current->status
+            || $encoded !== (string) $current->result_summary
+        ) {
+            return new WP_Error(
+                'nwmd_operator_preview_save_failed',
+                __(
+                    'The active operator run could not store the research preview safely.',
+                    'local-directory-framework'
+                )
+            );
+        }
     }
 
     return true;
