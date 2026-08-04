@@ -925,7 +925,7 @@ function nwmd_directory_render_operator_budget_section() {
         <p>
             <?php
             echo esc_html__(
-                'Paid research is limited to supervised preview runs. Usage is recorded in the ledger and blocked automatically when configured safeguards are exceeded.',
+                'Paid research is available for supervised previews and controlled automation. Usage is recorded in the ledger and blocked automatically when configured safeguards are exceeded.',
                 'local-directory-framework'
             );
             ?>

@@ -1422,8 +1422,8 @@ function nwmd_directory_format_operator_automation_date(
 /**
  * Render controlled automation settings and health.
  *
- * Version 0.1.91 adds configuration, health visibility, and a no-cost weekly scheduler heartbeat.
- * Automatic queue execution is not installed by this milestone.
+ * Version 0.1.92 adds controlled weekly automated research with guarded
+ * budget enforcement and supervised review.
  */
 function nwmd_directory_render_operator_automation_section() {
 
@@ -1919,7 +1919,7 @@ function nwmd_directory_render_operator_automation_section() {
                         <p class="description">
                             <?php
                             echo esc_html__(
-                                'Version 0.1.91 schedules a heartbeat only. Automatic queue execution and paid research remain unavailable.',
+                                'Version 0.1.92 can run one guarded research preview on schedule when automation is enabled and Test Mode is disabled. Results still require supervised review.',
                                 'local-directory-framework'
                             );
                             ?>
