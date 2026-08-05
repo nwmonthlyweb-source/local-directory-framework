@@ -438,47 +438,6 @@ function nwmd_directory_render_operator_admin_page() {
                 </table>
             <?php endif; ?>
 
-            <?php
-            if (
-                function_exists(
-                    'nwmd_directory_render_openai_operator_section'
-                )
-            ) {
-                nwmd_directory_render_openai_operator_section();
-            }
-            ?>
-            <?php
-            if (
-                function_exists(
-                    'nwmd_directory_render_operator_budget_section'
-                )
-            ) {
-                nwmd_directory_render_operator_budget_section();
-            }
-
-            if (
-                function_exists(
-                    'nwmd_directory_render_operator_budget_test_section'
-                )
-            ) {
-                nwmd_directory_render_operator_budget_test_section();
-            }
-            if (
-                function_exists(
-                    'nwmd_directory_render_operator_research_preview_section'
-                )
-            ) {
-                nwmd_directory_render_operator_research_preview_section();
-            }
-
-            if (
-                function_exists(
-                    'nwmd_directory_render_operator_automation_section'
-                )
-            ) {
-                nwmd_directory_render_operator_automation_section();
-            }
-            ?>
             <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
             <p>
