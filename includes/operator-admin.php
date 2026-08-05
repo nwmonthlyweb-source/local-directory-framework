@@ -438,6 +438,26 @@ function nwmd_directory_render_operator_admin_page() {
                 </table>
             <?php endif; ?>
 
+            <h2><?php echo esc_html__('AI state export', 'local-directory-framework'); ?></h2>
+
+            <p>
+                <?php
+                echo esc_html__(
+                    'Download a read-only ZIP containing Businesses, research sources, Deals, queue checkpoints, Operator runs, taxonomy terms, and a checksum manifest for the supervised AI workflow.',
+                    'local-directory-framework'
+                );
+                ?>
+            </p>
+
+            <?php
+            nwmd_directory_render_operator_action_form(
+                'nwmd_directory_export_ai_state',
+                'nwmd_directory_export_ai_state',
+                __('Export AI State', 'local-directory-framework'),
+                'button button-secondary'
+            );
+            ?>
+
             <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
             <p>
