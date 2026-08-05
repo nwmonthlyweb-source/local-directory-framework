@@ -1313,9 +1313,14 @@ function nwmd_directory_get_ai_state_taxonomy_rows() {
                 if ($related_term_id < 1) {
                     return new WP_Error(
                         'nwmd_ai_state_taxonomy_relation_id_missing',
-                        __(
-                            'A taxonomy term does not have its required related term.',
-                            'local-directory-framework'
+                        sprintf(
+                            __(
+                                'Taxonomy term "%1$s" in "%2$s" does not have its required "%3$s" relationship.',
+                                'local-directory-framework'
+                            ),
+                            $term_slug,
+                            $taxonomy,
+                            $related_taxonomy
                         ),
                         [
                             'taxonomy'         => $taxonomy,
