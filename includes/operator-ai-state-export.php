@@ -169,6 +169,13 @@ function nwmd_directory_get_ai_state_taxonomy_columns() {
         'parent_taxonomy',
         'parent_slug',
         'description',
+        'related_taxonomy',
+        'related_slug',
+        'state_abbreviation',
+        'city_group',
+        'city_state_rank',
+        'city_group_rank',
+        'display_order',
     ];
 }
 
@@ -183,7 +190,7 @@ function nwmd_directory_get_ai_state_taxonomy_columns() {
 function nwmd_directory_get_ai_state_export_schema() {
 
     return [
-        'format_version'      => '3.1',
+        'format_version'      => '3.2',
         'taxonomy_separator'  => '|',
         'records'             => [
             'businesses' => [
@@ -1176,7 +1183,7 @@ function nwmd_directory_get_ai_state_taxonomy_rows() {
         }
 
         foreach ($terms as $term) {
-            if (!$term instanceof WP_Term) {
+            if (!($term instanceof WP_Term)) {
                 continue;
             }
 
@@ -1205,7 +1212,10 @@ function nwmd_directory_get_ai_state_taxonomy_rows() {
             if ($parent_id > 0) {
                 if (
                     !isset($terms_by_id[$parent_id])
-                    || !$terms_by_id[$parent_id] instanceof WP_Term
+                    || !(
+                        $terms_by_id[$parent_id]
+                        instanceof WP_Term
+                    )
                 ) {
                     return new WP_Error(
                         'nwmd_ai_state_taxonomy_parent_missing',
@@ -1214,7 +1224,7 @@ function nwmd_directory_get_ai_state_taxonomy_rows() {
                             'local-directory-framework'
                         ),
                         [
-                            'taxonomy' => $taxonomy,
+                            'taxonomy'  => $taxonomy,
                             'term_slug' => $term_slug,
                             'parent_id' => $parent_id,
                         ]
@@ -1227,17 +1237,163 @@ function nwmd_directory_get_ai_state_taxonomy_rows() {
                 );
             }
 
+            $related_taxonomy = '';
+            $related_slug = '';
+            $related_meta_key = '';
+            $state_abbreviation = '';
+            $city_group = '';
+            $city_state_rank = 0;
+            $city_group_rank = 0;
+
+            $display_order = absint(
+                get_term_meta(
+                    $term->term_id,
+                    'nwmd_display_order',
+                    true
+                )
+            );
+
+            if ('nwmd_state' === $taxonomy) {
+                $state_abbreviation = sanitize_text_field(
+                    (string) get_term_meta(
+                        $term->term_id,
+                        'nwmd_abbreviation',
+                        true
+                    )
+                );
+            } elseif ('nwmd_city' === $taxonomy) {
+                $related_taxonomy = 'nwmd_state';
+                $related_meta_key = 'nwmd_state_term_id';
+
+                $state_abbreviation = sanitize_text_field(
+                    (string) get_term_meta(
+                        $term->term_id,
+                        'nwmd_state_abbreviation',
+                        true
+                    )
+                );
+
+                $city_group = sanitize_key(
+                    (string) get_term_meta(
+                        $term->term_id,
+                        'nwmd_city_group',
+                        true
+                    )
+                );
+
+                $city_state_rank = absint(
+                    get_term_meta(
+                        $term->term_id,
+                        'nwmd_city_state_rank',
+                        true
+                    )
+                );
+
+                $city_group_rank = absint(
+                    get_term_meta(
+                        $term->term_id,
+                        'nwmd_city_group_rank',
+                        true
+                    )
+                );
+            } elseif ('nwmd_specialty' === $taxonomy) {
+                $related_taxonomy = 'nwmd_category';
+                $related_meta_key = 'nwmd_category_term_id';
+            }
+
+            if ('' !== $related_meta_key) {
+                $related_term_id = absint(
+                    get_term_meta(
+                        $term->term_id,
+                        $related_meta_key,
+                        true
+                    )
+                );
+
+                if ($related_term_id < 1) {
+                    return new WP_Error(
+                        'nwmd_ai_state_taxonomy_relation_id_missing',
+                        __(
+                            'A taxonomy term does not have its required related term.',
+                            'local-directory-framework'
+                        ),
+                        [
+                            'taxonomy'         => $taxonomy,
+                            'term_slug'        => $term_slug,
+                            'related_taxonomy' =>
+                                $related_taxonomy,
+                            'related_meta_key' =>
+                                $related_meta_key,
+                        ]
+                    );
+                }
+
+                $related_term = get_term(
+                    $related_term_id,
+                    $related_taxonomy
+                );
+
+                if (
+                    !($related_term instanceof WP_Term)
+                    || is_wp_error($related_term)
+                ) {
+                    return new WP_Error(
+                        'nwmd_ai_state_taxonomy_relation_missing',
+                        __(
+                            'A taxonomy term references a missing related term.',
+                            'local-directory-framework'
+                        ),
+                        [
+                            'taxonomy'         => $taxonomy,
+                            'term_slug'        => $term_slug,
+                            'related_taxonomy' =>
+                                $related_taxonomy,
+                            'related_term_id'  =>
+                                $related_term_id,
+                        ]
+                    );
+                }
+
+                $related_slug = sanitize_title(
+                    (string) $related_term->slug
+                );
+
+                if ('' === $related_slug) {
+                    return new WP_Error(
+                        'nwmd_ai_state_taxonomy_relation_invalid',
+                        __(
+                            'A related taxonomy term does not have a valid portable slug.',
+                            'local-directory-framework'
+                        ),
+                        [
+                            'taxonomy'         => $taxonomy,
+                            'term_slug'        => $term_slug,
+                            'related_taxonomy' =>
+                                $related_taxonomy,
+                        ]
+                    );
+                }
+            }
+
             $export_rows[] = [
-                'taxonomy'        => $taxonomy,
-                'term_slug'       => $term_slug,
-                'term_name'       =>
+                'taxonomy'          => $taxonomy,
+                'term_slug'         => $term_slug,
+                'term_name'         =>
                     sanitize_text_field(
                         (string) $term->name
                     ),
-                'parent_taxonomy' => $parent_taxonomy,
-                'parent_slug'     => $parent_slug,
-                'description'     =>
+                'parent_taxonomy'   => $parent_taxonomy,
+                'parent_slug'       => $parent_slug,
+                'description'       =>
                     (string) $term->description,
+                'related_taxonomy'  => $related_taxonomy,
+                'related_slug'      => $related_slug,
+                'state_abbreviation' =>
+                    $state_abbreviation,
+                'city_group'        => $city_group,
+                'city_state_rank'   => $city_state_rank,
+                'city_group_rank'   => $city_group_rank,
+                'display_order'     => $display_order,
             ];
         }
     }
