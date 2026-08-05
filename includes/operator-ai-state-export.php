@@ -1310,73 +1310,54 @@ function nwmd_directory_get_ai_state_taxonomy_rows() {
                     )
                 );
 
-                if ($related_term_id < 1) {
-                    return new WP_Error(
-                        'nwmd_ai_state_taxonomy_relation_id_missing',
-                        sprintf(
+                if ($related_term_id > 0) {
+                    $related_term = get_term(
+                        $related_term_id,
+                        $related_taxonomy
+                    );
+
+                    if (
+                        !($related_term instanceof WP_Term)
+                        || is_wp_error($related_term)
+                    ) {
+                        return new WP_Error(
+                            'nwmd_ai_state_taxonomy_relation_missing',
                             __(
-                                'Taxonomy term "%1$s" in "%2$s" does not have its required "%3$s" relationship.',
+                                'A taxonomy term references a missing related term.',
                                 'local-directory-framework'
                             ),
-                            $term_slug,
-                            $taxonomy,
-                            $related_taxonomy
-                        ),
-                        [
-                            'taxonomy'         => $taxonomy,
-                            'term_slug'        => $term_slug,
-                            'related_taxonomy' =>
-                                $related_taxonomy,
-                            'related_meta_key' =>
-                                $related_meta_key,
-                        ]
+                            [
+                                'taxonomy'         => $taxonomy,
+                                'term_slug'        => $term_slug,
+                                'related_taxonomy' =>
+                                    $related_taxonomy,
+                                'related_term_id'  =>
+                                    $related_term_id,
+                            ]
+                        );
+                    }
+
+                    $related_slug = sanitize_title(
+                        (string) $related_term->slug
                     );
-                }
 
-                $related_term = get_term(
-                    $related_term_id,
-                    $related_taxonomy
-                );
-
-                if (
-                    !($related_term instanceof WP_Term)
-                    || is_wp_error($related_term)
-                ) {
-                    return new WP_Error(
-                        'nwmd_ai_state_taxonomy_relation_missing',
-                        __(
-                            'A taxonomy term references a missing related term.',
-                            'local-directory-framework'
-                        ),
-                        [
-                            'taxonomy'         => $taxonomy,
-                            'term_slug'        => $term_slug,
-                            'related_taxonomy' =>
-                                $related_taxonomy,
-                            'related_term_id'  =>
-                                $related_term_id,
-                        ]
-                    );
-                }
-
-                $related_slug = sanitize_title(
-                    (string) $related_term->slug
-                );
-
-                if ('' === $related_slug) {
-                    return new WP_Error(
-                        'nwmd_ai_state_taxonomy_relation_invalid',
-                        __(
-                            'A related taxonomy term does not have a valid portable slug.',
-                            'local-directory-framework'
-                        ),
-                        [
-                            'taxonomy'         => $taxonomy,
-                            'term_slug'        => $term_slug,
-                            'related_taxonomy' =>
-                                $related_taxonomy,
-                        ]
-                    );
+                    if ('' === $related_slug) {
+                        return new WP_Error(
+                            'nwmd_ai_state_taxonomy_relation_invalid',
+                            __(
+                                'A related taxonomy term does not have a valid portable slug.',
+                                'local-directory-framework'
+                            ),
+                            [
+                                'taxonomy'         => $taxonomy,
+                                'term_slug'        => $term_slug,
+                                'related_taxonomy' =>
+                                    $related_taxonomy,
+                            ]
+                        );
+                    }
+                } else {
+                    $related_taxonomy = '';
                 }
             }
 
