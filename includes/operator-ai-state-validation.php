@@ -2282,44 +2282,23 @@ function nwmd_directory_render_ai_state_validation_notice() {
 }
 
 /**
- * Validate an uploaded AI state ZIP without importing it.
+ * Validate one AI state ZIP upload and return its parsed package.
+ *
+ * The temporary upload is read in place and is never moved or imported.
+ *
+ * @param mixed $file One entry from the PHP files upload array.
+ *
+ * @return array|WP_Error
  */
-function nwmd_directory_handle_ai_state_validation() {
-
-    if (!current_user_can('manage_options')) {
-        wp_die(
-            esc_html__(
-                'You are not allowed to validate AI state data.',
-                'local-directory-framework'
-            ),
-            esc_html__(
-                'Access denied',
-                'local-directory-framework'
-            ),
-            [
-                'response' => 403,
-            ]
-        );
-    }
-
-    check_admin_referer(
-        'nwmd_directory_validate_ai_state'
-    );
-
-    $file = isset($_FILES['nwmd_ai_state_zip'])
-        && is_array($_FILES['nwmd_ai_state_zip'])
-            ? $_FILES['nwmd_ai_state_zip']
-            : null;
+function nwmd_directory_validate_ai_state_upload($file) {
 
     if (!is_array($file)) {
-        nwmd_directory_finish_ai_state_validation(
-            [
-                'success' => false,
-                'message' => __(
-                    'Select an AI state ZIP to validate.',
-                    'local-directory-framework'
-                ),
-            ]
+        return new WP_Error(
+            'nwmd_ai_state_upload_missing',
+            __(
+                'Select an AI state ZIP to validate.',
+                'local-directory-framework'
+            )
         );
     }
 
@@ -2366,16 +2345,13 @@ function nwmd_directory_handle_ai_state_validation() {
                 ),
         ];
 
-        nwmd_directory_finish_ai_state_validation(
-            [
-                'success' => false,
-                'message' =>
-                    $messages[$upload_error]
-                    ?? __(
-                        'The AI state ZIP upload failed.',
-                        'local-directory-framework'
-                    ),
-            ]
+        return new WP_Error(
+            'nwmd_ai_state_upload_failed',
+            $messages[$upload_error]
+                ?? __(
+                    'The AI state ZIP upload failed.',
+                    'local-directory-framework'
+                )
         );
     }
 
@@ -2401,38 +2377,32 @@ function nwmd_directory_handle_ai_state_validation() {
             )
         )
     ) {
-        nwmd_directory_finish_ai_state_validation(
-            [
-                'success' => false,
-                'message' => __(
-                    'The uploaded file must use the .zip extension.',
-                    'local-directory-framework'
-                ),
-            ]
+        return new WP_Error(
+            'nwmd_ai_state_upload_extension',
+            __(
+                'The uploaded file must use the .zip extension.',
+                'local-directory-framework'
+            )
         );
     }
 
     if ($file_size < 1) {
-        nwmd_directory_finish_ai_state_validation(
-            [
-                'success' => false,
-                'message' => __(
-                    'The uploaded ZIP is empty.',
-                    'local-directory-framework'
-                ),
-            ]
+        return new WP_Error(
+            'nwmd_ai_state_upload_empty',
+            __(
+                'The uploaded ZIP is empty.',
+                'local-directory-framework'
+            )
         );
     }
 
     if ($file_size > 10 * MB_IN_BYTES) {
-        nwmd_directory_finish_ai_state_validation(
-            [
-                'success' => false,
-                'message' => __(
-                    'The uploaded ZIP exceeds the 10 MB limit.',
-                    'local-directory-framework'
-                ),
-            ]
+        return new WP_Error(
+            'nwmd_ai_state_upload_too_large',
+            __(
+                'The uploaded ZIP exceeds the 10 MB limit.',
+                'local-directory-framework'
+            )
         );
     }
 
@@ -2441,14 +2411,12 @@ function nwmd_directory_handle_ai_state_validation() {
         || !is_uploaded_file($tmp_name)
         || !is_readable($tmp_name)
     ) {
-        nwmd_directory_finish_ai_state_validation(
-            [
-                'success' => false,
-                'message' => __(
-                    'The uploaded ZIP could not be read safely.',
-                    'local-directory-framework'
-                ),
-            ]
+        return new WP_Error(
+            'nwmd_ai_state_upload_unreadable',
+            __(
+                'The uploaded ZIP could not be read safely.',
+                'local-directory-framework'
+            )
         );
     }
 
@@ -2458,15 +2426,65 @@ function nwmd_directory_handle_ai_state_validation() {
         );
 
     if (is_wp_error($validated)) {
+        return $validated;
+    }
+
+    return [
+        'filename' => $filename,
+        'package'  => $validated,
+    ];
+}
+
+/**
+ * Validate an uploaded AI state ZIP without importing it.
+ */
+function nwmd_directory_handle_ai_state_validation() {
+
+    if (!current_user_can('manage_options')) {
+        wp_die(
+            esc_html__(
+                'You are not allowed to validate AI state data.',
+                'local-directory-framework'
+            ),
+            esc_html__(
+                'Access denied',
+                'local-directory-framework'
+            ),
+            [
+                'response' => 403,
+            ]
+        );
+    }
+
+    check_admin_referer(
+        'nwmd_directory_validate_ai_state'
+    );
+
+    $file = isset($_FILES['nwmd_ai_state_zip'])
+        && is_array($_FILES['nwmd_ai_state_zip'])
+            ? $_FILES['nwmd_ai_state_zip']
+            : null;
+
+    $upload = nwmd_directory_validate_ai_state_upload(
+        $file
+    );
+
+    if (is_wp_error($upload)) {
         nwmd_directory_finish_ai_state_validation(
             [
                 'success' => false,
                 'message' => sanitize_text_field(
-                    $validated->get_error_message()
+                    $upload->get_error_message()
                 ),
             ]
         );
     }
+
+    $filename = (string) ($upload['filename'] ?? '');
+    $validated = isset($upload['package'])
+        && is_array($upload['package'])
+            ? $upload['package']
+            : [];
 
     $manifest = isset($validated['manifest'])
         && is_array($validated['manifest'])

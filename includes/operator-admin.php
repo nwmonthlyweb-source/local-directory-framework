@@ -295,6 +295,7 @@ function nwmd_directory_render_operator_admin_page() {
         <?php nwmd_directory_render_operator_seed_notice(); ?>
         <?php nwmd_directory_render_operator_action_notice(); ?>
         <?php nwmd_directory_render_ai_state_validation_notice(); ?>
+        <?php nwmd_directory_render_ai_state_preview_notice(); ?>
 
         <?php if (!empty($status['ready'])) : ?>
             <div class="notice notice-success inline">
@@ -520,6 +521,69 @@ function nwmd_directory_render_operator_admin_page() {
                     ?>
                 </button>
             </form>
+
+            <h3>
+                <?php
+                echo esc_html__(
+                    'Preview AI State Import',
+                    'local-directory-framework'
+                );
+                ?>
+            </h3>
+
+            <p>
+                <?php
+                echo esc_html__(
+                    'Upload a valid AI state ZIP to compare it with current normalized records. The preview reports additions, changes, unchanged records, records missing from the upload, and conflicts. It does not import or change data.',
+                    'local-directory-framework'
+                );
+                ?>
+            </p>
+
+            <form
+                method="post"
+                action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+                enctype="multipart/form-data"
+                style="max-width: 760px; margin-bottom: 24px;"
+            >
+                <input
+                    type="hidden"
+                    name="action"
+                    value="nwmd_directory_preview_ai_state"
+                >
+
+                <input
+                    type="hidden"
+                    name="MAX_FILE_SIZE"
+                    value="<?php echo esc_attr((string) (10 * MB_IN_BYTES)); ?>"
+                >
+
+                <?php
+                wp_nonce_field(
+                    'nwmd_directory_preview_ai_state'
+                );
+                ?>
+
+                <input
+                    type="file"
+                    name="nwmd_ai_state_preview_zip"
+                    accept=".zip,application/zip"
+                    required
+                >
+
+                <button
+                    type="submit"
+                    class="button button-secondary"
+                >
+                    <?php
+                    echo esc_html__(
+                        'Preview AI State Import',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </button>
+            </form>
+
             <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
             <p>
