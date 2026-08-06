@@ -424,7 +424,7 @@ function nwmd_directory_save_business_deal() {
 
     if (1 === $is_featured && 'active' !== $status) {
         nwmd_directory_redirect_business_deals_admin(
-            'invalid-values',
+            'featured-requires-active',
             $business_post_id,
             $deal_id
         );

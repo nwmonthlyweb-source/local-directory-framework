@@ -165,6 +165,13 @@ function nwmd_directory_render_business_deals_admin_notice() {
                 'local-directory-framework'
             ),
         ],
+        'featured-requires-active' => [
+            'error',
+            __(
+                'Only active Deals can be featured.',
+                'local-directory-framework'
+            ),
+        ],
         'invalid-dates' => [
             'error',
             __(
