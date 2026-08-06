@@ -25,6 +25,152 @@ add_action(
 );
 
 /**
+ * Load dependent ranking-entry filters on the Monthly Rankings page.
+ *
+ * @param string $hook_suffix Current admin-page hook.
+ */
+function nwmd_directory_enqueue_rankings_admin_assets(
+    $hook_suffix
+) {
+
+    if (
+        'nwmd_business_page_nwmd-monthly-rankings'
+        !== $hook_suffix
+    ) {
+        return;
+    }
+
+    $script_relative_path = 'assets/js/admin-rankings.js';
+    $script_file_path = NWMD_DIRECTORY_PATH
+        . $script_relative_path;
+
+    $script_version = is_readable($script_file_path)
+        ? (string) filemtime($script_file_path)
+        : NWMD_DIRECTORY_VERSION;
+
+    wp_enqueue_script(
+        'nwmd-directory-rankings-admin',
+        NWMD_DIRECTORY_URL . $script_relative_path,
+        [],
+        $script_version,
+        true
+    );
+}
+
+add_action(
+    'admin_enqueue_scripts',
+    'nwmd_directory_enqueue_rankings_admin_assets'
+);
+
+/**
+ * Return batched taxonomy memberships for ranking Businesses.
+ *
+ * @param array $businesses Eligible Business posts.
+ *
+ * @return array
+ */
+function nwmd_directory_get_ranking_business_term_memberships(
+    $businesses
+) {
+
+    $taxonomy_keys = [
+        'nwmd_state'     => 'state_term_ids',
+        'nwmd_city'      => 'city_term_ids',
+        'nwmd_category'  => 'category_term_ids',
+        'nwmd_specialty' => 'specialty_term_ids',
+    ];
+
+    $memberships = [];
+    $business_ids = [];
+
+    foreach ($businesses as $business) {
+        if (
+            !$business instanceof WP_Post ||
+            'nwmd_business' !== $business->post_type
+        ) {
+            continue;
+        }
+
+        $business_id = absint($business->ID);
+
+        if ($business_id < 1) {
+            continue;
+        }
+
+        $business_ids[] = $business_id;
+        $memberships[$business_id] = [
+            'state_term_ids'     => [],
+            'city_term_ids'      => [],
+            'category_term_ids'  => [],
+            'specialty_term_ids' => [],
+        ];
+    }
+
+    if (empty($business_ids)) {
+        return $memberships;
+    }
+
+    foreach ($taxonomy_keys as $taxonomy => $membership_key) {
+        $terms = wp_get_object_terms(
+            $business_ids,
+            $taxonomy,
+            [
+                'fields' => 'all_with_object_id',
+            ]
+        );
+
+        if (is_wp_error($terms)) {
+            continue;
+        }
+
+        foreach ($terms as $term) {
+            if (
+                !$term instanceof WP_Term ||
+                !isset($term->object_id)
+            ) {
+                continue;
+            }
+
+            $business_id = absint($term->object_id);
+            $term_id = absint($term->term_id);
+
+            if (
+                $business_id < 1 ||
+                $term_id < 1 ||
+                !isset($memberships[$business_id])
+            ) {
+                continue;
+            }
+
+            $memberships[$business_id][$membership_key][]
+                = $term_id;
+        }
+    }
+
+    foreach ($memberships as &$business_memberships) {
+        foreach ($taxonomy_keys as $membership_key) {
+            $business_memberships[$membership_key] = array_values(
+                array_unique(
+                    array_map(
+                        'absint',
+                        $business_memberships[$membership_key]
+                    )
+                )
+            );
+
+            sort(
+                $business_memberships[$membership_key],
+                SORT_NUMERIC
+            );
+        }
+    }
+
+    unset($business_memberships);
+
+    return $memberships;
+}
+
+/**
  * Return a human-readable ranking period label.
  *
  * @param string $period_key Period in YYYY-MM format.
@@ -375,6 +521,7 @@ function nwmd_directory_render_rankings_admin_page() {
     $categories = [];
     $specialties = [];
     $businesses = [];
+    $business_term_memberships = [];
     $term_names = [];
 
     if ($selected_period) {
@@ -466,6 +613,17 @@ function nwmd_directory_render_rankings_admin_page() {
                 'order'          => 'ASC',
             ]
         );
+
+        if (
+            nwmd_directory_ranking_period_is_editable(
+                $selected_period
+            )
+        ) {
+            $business_term_memberships =
+                nwmd_directory_get_ranking_business_term_memberships(
+                    $businesses
+                );
+        }
 
         $taxonomy_terms = [
             'nwmd_state'     => $states,
@@ -734,7 +892,19 @@ function nwmd_directory_render_rankings_admin_page() {
                                     </option>
 
                                     <?php foreach ($cities as $city) : ?>
-                                        <option value="<?php echo esc_attr($city->term_id); ?>">
+                                        <?php
+                                        $city_state_term_id = absint(
+                                            get_term_meta(
+                                                $city->term_id,
+                                                'nwmd_state_term_id',
+                                                true
+                                            )
+                                        );
+                                        ?>
+                                        <option
+                                            value="<?php echo esc_attr($city->term_id); ?>"
+                                            data-state-term-id="<?php echo esc_attr($city_state_term_id); ?>"
+                                        >
                                             <?php echo esc_html($city->name); ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -783,7 +953,19 @@ function nwmd_directory_render_rankings_admin_page() {
                                     </option>
 
                                     <?php foreach ($specialties as $specialty) : ?>
-                                        <option value="<?php echo esc_attr($specialty->term_id); ?>">
+                                        <?php
+                                        $specialty_category_term_id = absint(
+                                            get_term_meta(
+                                                $specialty->term_id,
+                                                'nwmd_category_term_id',
+                                                true
+                                            )
+                                        );
+                                        ?>
+                                        <option
+                                            value="<?php echo esc_attr($specialty->term_id); ?>"
+                                            data-category-term-id="<?php echo esc_attr($specialty_category_term_id); ?>"
+                                        >
                                             <?php echo esc_html($specialty->name); ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -801,6 +983,7 @@ function nwmd_directory_render_rankings_admin_page() {
                                 <select
                                     id="nwmd_business_post_id"
                                     name="business_post_id"
+                                    data-no-matches-label="<?php echo esc_attr__('No matching businesses', 'local-directory-framework'); ?>"
                                     required
                                 >
                                     <option value="">
@@ -808,7 +991,24 @@ function nwmd_directory_render_rankings_admin_page() {
                                     </option>
 
                                     <?php foreach ($businesses as $business) : ?>
-                                        <option value="<?php echo esc_attr($business->ID); ?>">
+                                        <?php
+                                        $business_id = absint($business->ID);
+                                        $business_memberships =
+                                            $business_term_memberships[$business_id]
+                                            ?? [
+                                                'state_term_ids'     => [],
+                                                'city_term_ids'      => [],
+                                                'category_term_ids'  => [],
+                                                'specialty_term_ids' => [],
+                                            ];
+                                        ?>
+                                        <option
+                                            value="<?php echo esc_attr($business_id); ?>"
+                                            data-state-term-ids="<?php echo esc_attr(implode(',', $business_memberships['state_term_ids'])); ?>"
+                                            data-city-term-ids="<?php echo esc_attr(implode(',', $business_memberships['city_term_ids'])); ?>"
+                                            data-category-term-ids="<?php echo esc_attr(implode(',', $business_memberships['category_term_ids'])); ?>"
+                                            data-specialty-term-ids="<?php echo esc_attr(implode(',', $business_memberships['specialty_term_ids'])); ?>"
+                                        >
                                             <?php
                                             echo esc_html(
                                                 sprintf(
