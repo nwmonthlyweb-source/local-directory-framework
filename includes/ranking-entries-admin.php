@@ -293,6 +293,23 @@ function nwmd_directory_save_ranking_entry() {
         );
     }
 
+    if ($specialty instanceof WP_Term) {
+        $specialty_category_term_id = absint(
+            get_term_meta(
+                $specialty_term_id,
+                'nwmd_category_term_id',
+                true
+            )
+        );
+
+        if ($specialty_category_term_id !== $category_term_id) {
+            nwmd_directory_redirect_ranking_entry_admin(
+                'invalid-ranking-entry',
+                $period_id
+            );
+        }
+    }
+
     if (
         !has_term(
             $state_term_id,

@@ -502,8 +502,21 @@ function nwmd_directory_render_operator_admin_page() {
                 );
                 ?>
 
+                <label
+                    class="screen-reader-text"
+                    for="nwmd-ai-state-validation-zip"
+                >
+                    <?php
+                    echo esc_html__(
+                        'AI state ZIP to validate',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </label>
+
                 <input
                     type="file"
+                    id="nwmd-ai-state-validation-zip"
                     name="nwmd_ai_state_zip"
                     accept=".zip,application/zip"
                     required
@@ -564,8 +577,21 @@ function nwmd_directory_render_operator_admin_page() {
                 );
                 ?>
 
+                <label
+                    class="screen-reader-text"
+                    for="nwmd-ai-state-preview-zip"
+                >
+                    <?php
+                    echo esc_html__(
+                        'AI state ZIP to preview',
+                        'local-directory-framework'
+                    );
+                    ?>
+                </label>
+
                 <input
                     type="file"
+                    id="nwmd-ai-state-preview-zip"
                     name="nwmd_ai_state_preview_zip"
                     accept=".zip,application/zip"
                     required

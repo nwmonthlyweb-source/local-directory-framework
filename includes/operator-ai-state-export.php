@@ -2112,6 +2112,8 @@ function nwmd_directory_create_ai_state_export_files() {
     }
 
     $manifest_files = [];
+    $total_rows = 0;
+    $expanded_bytes = 0;
 
     foreach ($export['records'] as $record_name => $record) {
         $filename = sanitize_file_name(
@@ -2138,6 +2140,23 @@ function nwmd_directory_create_ai_state_export_files() {
                         'local-directory-framework'
                     ),
                     sanitize_key($record_name)
+                )
+            );
+        }
+
+        $row_count = count($rows);
+        $total_rows += $row_count;
+
+        if ($row_count > 100000 || $total_rows > 250000) {
+            nwmd_directory_remove_ai_state_working_directory(
+                $directory
+            );
+
+            return new WP_Error(
+                'nwmd_ai_state_export_row_limit',
+                __(
+                    'The AI state export exceeds the validation row limits.',
+                    'local-directory-framework'
                 )
             );
         }
@@ -2191,6 +2210,25 @@ function nwmd_directory_create_ai_state_export_files() {
             );
         }
 
+        $expanded_bytes += (int) $file_size;
+
+        if (
+            $file_size > 8 * MB_IN_BYTES
+            || $expanded_bytes > 25 * MB_IN_BYTES
+        ) {
+            nwmd_directory_remove_ai_state_working_directory(
+                $directory
+            );
+
+            return new WP_Error(
+                'nwmd_ai_state_export_size_limit',
+                __(
+                    'The AI state export exceeds the validation size limits.',
+                    'local-directory-framework'
+                )
+            );
+        }
+
         $manifest_files[$filename] = [
             'record_name' =>
                 sanitize_key($record_name),
@@ -2240,6 +2278,29 @@ function nwmd_directory_create_ai_state_export_files() {
         );
 
         return $manifest_written;
+    }
+
+    clearstatcache(true, $manifest_path);
+
+    $manifest_size = filesize($manifest_path);
+
+    if (
+        false === $manifest_size
+        || $manifest_size > 256 * KB_IN_BYTES
+        || $expanded_bytes + $manifest_size
+            > 25 * MB_IN_BYTES
+    ) {
+        nwmd_directory_remove_ai_state_working_directory(
+            $directory
+        );
+
+        return new WP_Error(
+            'nwmd_ai_state_export_manifest_size_limit',
+            __(
+                'The AI state manifest exceeds the validation size limits.',
+                'local-directory-framework'
+            )
+        );
     }
 
     return [
@@ -2492,6 +2553,18 @@ function nwmd_directory_create_ai_state_zip(
             'nwmd_ai_state_zip_invalid',
             __(
                 'The completed AI state ZIP file is invalid.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if ($zip_size > 10 * MB_IN_BYTES) {
+        wp_delete_file($zip_path);
+
+        return new WP_Error(
+            'nwmd_ai_state_zip_size_limit',
+            __(
+                'The completed AI state ZIP exceeds the 10 MB validation limit.',
                 'local-directory-framework'
             )
         );

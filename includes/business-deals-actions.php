@@ -367,6 +367,11 @@ function nwmd_directory_save_business_deal() {
         (
             null !== $verified_at &&
             $verified_at > current_time('mysql')
+        ) ||
+        (
+            'active' === $status &&
+            null !== $expires_at &&
+            $expires_at < current_time('mysql')
         )
     ) {
         nwmd_directory_redirect_business_deals_admin(
@@ -417,6 +422,14 @@ function nwmd_directory_save_business_deal() {
         );
     }
 
+    if (1 === $is_featured && 'active' !== $status) {
+        nwmd_directory_redirect_business_deals_admin(
+            'invalid-values',
+            $business_post_id,
+            $deal_id
+        );
+    }
+
     $identity =
         nwmd_directory_get_business_deal_by_identity(
             $business_post_id,
@@ -441,6 +454,18 @@ function nwmd_directory_save_business_deal() {
 
     $now = current_time('mysql');
     $user_id = get_current_user_id();
+    $using_transaction = 1 === $is_featured;
+
+    if (
+        $using_transaction &&
+        false === $wpdb->query('START TRANSACTION')
+    ) {
+        nwmd_directory_redirect_business_deals_admin(
+            'deal-save-failed',
+            $business_post_id,
+            $deal_id
+        );
+    }
 
     $data = [
         'business_post_id' => $business_post_id,
@@ -518,6 +543,10 @@ function nwmd_directory_save_business_deal() {
     }
 
     if (false === $saved || 0 === $saved_id) {
+        if ($using_transaction) {
+            $wpdb->query('ROLLBACK');
+        }
+
         nwmd_directory_redirect_business_deals_admin(
             'deal-save-failed',
             $business_post_id,
@@ -526,7 +555,7 @@ function nwmd_directory_save_business_deal() {
     }
 
     if (1 === $is_featured) {
-        $wpdb->query(
+        $unfeatured = $wpdb->query(
             $wpdb->prepare(
                 "UPDATE {$table}
                 SET
@@ -541,6 +570,26 @@ function nwmd_directory_save_business_deal() {
                 $saved_id
             )
         );
+
+        if (false === $unfeatured) {
+            $wpdb->query('ROLLBACK');
+
+            nwmd_directory_redirect_business_deals_admin(
+                'deal-save-failed',
+                $business_post_id,
+                $deal_id
+            );
+        }
+
+        if (false === $wpdb->query('COMMIT')) {
+            $wpdb->query('ROLLBACK');
+
+            nwmd_directory_redirect_business_deals_admin(
+                'deal-save-failed',
+                $business_post_id,
+                $deal_id
+            );
+        }
     }
 
     nwmd_directory_redirect_business_deals_admin(

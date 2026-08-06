@@ -908,7 +908,7 @@ function nwmd_directory_parse_ai_state_csv(
         0,
         ',',
         '"',
-        '\\'
+        ''
     );
 
     if (!is_array($headers) || empty($headers)) {
@@ -967,7 +967,7 @@ function nwmd_directory_parse_ai_state_csv(
                 0,
                 ',',
                 '"',
-                '\\'
+                ''
             )
         )
     ) {

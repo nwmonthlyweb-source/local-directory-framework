@@ -591,6 +591,21 @@ function nwmd_directory_import_business_csv_row(
     $post_id = absint($post_id);
     $created_post_ids[] = $post_id;
 
+    $created_post = get_post($post_id);
+
+    if (
+        !$created_post instanceof WP_Post ||
+        $business_slug !== (string) $created_post->post_name
+    ) {
+        return new WP_Error(
+            'nwmd_csv_business_slug_changed',
+            __(
+                'The business slug changed while the draft was being created.',
+                'local-directory-framework'
+            )
+        );
+    }
+
     $taxonomy_fields = [
         'state_slug' => 'nwmd_state',
         'city_slug' => 'nwmd_city',

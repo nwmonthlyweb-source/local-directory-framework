@@ -1461,6 +1461,23 @@ function nwmd_directory_handle_business_request_verification() {
         );
     }
 
+    $provided_hash = hash(
+        'sha256',
+        $token
+    );
+
+    if (
+        '' === (string) $request->verification_token_hash ||
+        !hash_equals(
+            (string) $request->verification_token_hash,
+            $provided_hash
+        )
+    ) {
+        nwmd_directory_redirect_business_request(
+            'invalid-verification'
+        );
+    }
+
     $created_at = DateTimeImmutable::createFromFormat(
         '!Y-m-d H:i:s',
         (string) $request->created_at,
@@ -1479,7 +1496,7 @@ function nwmd_directory_handle_business_request_verification() {
         $table = $wpdb->prefix
             . 'nwmd_business_requests';
 
-        $wpdb->update(
+        $archived = $wpdb->update(
             $table,
             [
                 'verification_token_hash' => '',
@@ -1487,7 +1504,10 @@ function nwmd_directory_handle_business_request_verification() {
                 'updated_at'              => current_time('mysql'),
             ],
             [
-                'id' => $request_id,
+                'id'                      => $request_id,
+                'status'                  => 'pending_email',
+                'verification_token_hash' =>
+                    (string) $request->verification_token_hash,
             ],
             [
                 '%s',
@@ -1496,28 +1516,19 @@ function nwmd_directory_handle_business_request_verification() {
             ],
             [
                 '%d',
+                '%s',
+                '%s',
             ]
         );
 
+        if (1 !== $archived) {
+            nwmd_directory_redirect_business_request(
+                'verification-failed'
+            );
+        }
+
         nwmd_directory_redirect_business_request(
             'expired-verification'
-        );
-    }
-
-    $provided_hash = hash(
-        'sha256',
-        $token
-    );
-
-    if (
-        '' === (string) $request->verification_token_hash ||
-        !hash_equals(
-            (string) $request->verification_token_hash,
-            $provided_hash
-        )
-    ) {
-        nwmd_directory_redirect_business_request(
-            'invalid-verification'
         );
     }
 

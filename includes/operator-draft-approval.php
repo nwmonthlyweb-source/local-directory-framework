@@ -458,6 +458,8 @@ function nwmd_directory_import_operator_draft_items(
  * Reset draft counters after a later operation fails.
  *
  * @param array $context Active checkpoint context.
+ *
+ * @return true|WP_Error
  */
 function nwmd_directory_reset_operator_draft_counters($context) {
 
@@ -466,7 +468,17 @@ function nwmd_directory_reset_operator_draft_counters($context) {
     $tables = nwmd_directory_get_operator_table_names();
     $now    = current_time('mysql');
 
-    $wpdb->update(
+    if (false === $wpdb->query('START TRANSACTION')) {
+        return new WP_Error(
+            'nwmd_operator_draft_counter_reset_transaction_failed',
+            __(
+                'The operator draft counters could not start a reset transaction.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $run_reset = $wpdb->update(
         $tables['runs'],
         [
             'businesses_created'       => 0,
@@ -488,7 +500,19 @@ function nwmd_directory_reset_operator_draft_counters($context) {
         ]
     );
 
-    $wpdb->update(
+    if (1 !== $run_reset) {
+        nwmd_directory_rollback_operator_transaction();
+
+        return new WP_Error(
+            'nwmd_operator_draft_run_counter_reset_failed',
+            __(
+                'The operator run draft counters could not be reset.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    $checkpoint_reset = $wpdb->update(
         $tables['specialties'],
         [
             'businesses_created' => 0,
@@ -507,6 +531,32 @@ function nwmd_directory_reset_operator_draft_counters($context) {
             '%s',
         ]
     );
+
+    if (1 !== $checkpoint_reset) {
+        nwmd_directory_rollback_operator_transaction();
+
+        return new WP_Error(
+            'nwmd_operator_draft_checkpoint_counter_reset_failed',
+            __(
+                'The operator checkpoint draft counter could not be reset.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if (false === $wpdb->query('COMMIT')) {
+        nwmd_directory_rollback_operator_transaction();
+
+        return new WP_Error(
+            'nwmd_operator_draft_counter_reset_commit_failed',
+            __(
+                'The operator draft counter reset could not be committed.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    return true;
 }
 
 /**
@@ -530,12 +580,23 @@ function nwmd_directory_record_operator_draft_counters(
     $count         = absint($count);
     $now           = current_time('mysql');
 
+    if (false === $wpdb->query('START TRANSACTION')) {
+        return new WP_Error(
+            'nwmd_operator_draft_counter_transaction_failed',
+            __(
+                'The operator draft counters could not start a transaction.',
+                'local-directory-framework'
+            )
+        );
+    }
+
     $run = $wpdb->get_row(
         $wpdb->prepare(
             "SELECT status, businesses_created, businesses_without_deals
             FROM {$tables['runs']}
             WHERE id = %d
-            LIMIT 1",
+            LIMIT 1
+            FOR UPDATE",
             $run_id
         )
     );
@@ -545,7 +606,8 @@ function nwmd_directory_record_operator_draft_counters(
             "SELECT status, businesses_created
             FROM {$tables['specialties']}
             WHERE id = %d
-            LIMIT 1",
+            LIMIT 1
+            FOR UPDATE",
             $checkpoint_id
         )
     );
@@ -559,6 +621,8 @@ function nwmd_directory_record_operator_draft_counters(
         || 'in_progress' !== (string) $checkpoint->status
         || 0 !== absint($checkpoint->businesses_created)
     ) {
+        nwmd_directory_rollback_operator_transaction();
+
         return new WP_Error(
             'nwmd_operator_draft_counter_state_invalid',
             __(
@@ -595,6 +659,8 @@ function nwmd_directory_record_operator_draft_counters(
     );
 
     if (1 !== $run_updated) {
+        nwmd_directory_rollback_operator_transaction();
+
         return new WP_Error(
             'nwmd_operator_draft_run_counter_failed',
             __(
@@ -627,12 +693,24 @@ function nwmd_directory_record_operator_draft_counters(
     );
 
     if (1 !== $checkpoint_updated) {
-        nwmd_directory_reset_operator_draft_counters($context);
+        nwmd_directory_rollback_operator_transaction();
 
         return new WP_Error(
             'nwmd_operator_draft_checkpoint_counter_failed',
             __(
                 'The operator checkpoint could not record the created drafts.',
+                'local-directory-framework'
+            )
+        );
+    }
+
+    if (false === $wpdb->query('COMMIT')) {
+        nwmd_directory_rollback_operator_transaction();
+
+        return new WP_Error(
+            'nwmd_operator_draft_counter_commit_failed',
+            __(
+                'The operator draft counters could not be committed.',
                 'local-directory-framework'
             )
         );
@@ -805,9 +883,20 @@ function nwmd_directory_create_operator_ready_business_drafts() {
                 );
 
             if (is_wp_error($counter_result)) {
-                nwmd_directory_rollback_business_csv_import(
-                    $created_post_ids
-                );
+                $drafts_rolled_back =
+                    nwmd_directory_rollback_business_csv_import(
+                        $created_post_ids
+                    );
+
+                if (!$drafts_rolled_back) {
+                    return new WP_Error(
+                        'nwmd_operator_draft_counter_cleanup_failed',
+                        __(
+                            'Draft counters could not be recorded, and one or more created records could not be rolled back.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
 
                 return $counter_result;
             }
@@ -831,13 +920,29 @@ function nwmd_directory_create_operator_ready_business_drafts() {
                 );
 
             if (is_wp_error($saved)) {
-                nwmd_directory_reset_operator_draft_counters(
-                    $context
-                );
+                $drafts_rolled_back =
+                    nwmd_directory_rollback_business_csv_import(
+                        $created_post_ids
+                    );
 
-                nwmd_directory_rollback_business_csv_import(
-                    $created_post_ids
-                );
+                if (!$drafts_rolled_back) {
+                    return new WP_Error(
+                        'nwmd_operator_draft_cleanup_failed',
+                        __(
+                            'The draft summary could not be saved, and one or more created records could not be rolled back.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
+
+                $counters_reset =
+                    nwmd_directory_reset_operator_draft_counters(
+                        $context
+                    );
+
+                if (is_wp_error($counters_reset)) {
+                    return $counters_reset;
+                }
 
                 return $saved;
             }

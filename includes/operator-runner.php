@@ -620,7 +620,17 @@ function nwmd_directory_claim_next_operator_checkpoint() {
             }
 
             if (!is_object($checkpoint)) {
-                $wpdb->query('COMMIT');
+                if (false === $wpdb->query('COMMIT')) {
+                    nwmd_directory_rollback_operator_transaction();
+
+                    return new WP_Error(
+                        'nwmd_operator_commit_failed',
+                        __(
+                            'The empty operator queue check could not be committed.',
+                            'local-directory-framework'
+                        )
+                    );
+                }
 
                 return new WP_Error(
                     'nwmd_operator_queue_empty',

@@ -820,7 +820,8 @@ function nwmd_directory_render_ai_state_preview_notice() {
             ?>
         </p>
 
-        <table class="widefat striped" style="max-width: 1080px;">
+        <div style="max-width: 1080px; overflow-x: auto;">
+        <table class="widefat striped">
             <thead>
                 <tr>
                     <th scope="col">
@@ -876,6 +877,7 @@ function nwmd_directory_render_ai_state_preview_notice() {
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
 
         <p>
             <?php

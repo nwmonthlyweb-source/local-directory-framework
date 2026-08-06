@@ -419,6 +419,8 @@ function nwmd_directory_get_ad_targeting_summary($ad) {
  *
  * @param array $data  Saved advertisement data.
  * @param int   $ad_id Advertisement being saved.
+ *
+ * @return bool
  */
 function nwmd_directory_pause_exact_ad_conflicts(
     $data,
@@ -426,7 +428,7 @@ function nwmd_directory_pause_exact_ad_conflicts(
 ) {
 
     if ('active' !== $data['status']) {
-        return;
+        return true;
     }
 
     global $wpdb;
@@ -434,7 +436,7 @@ function nwmd_directory_pause_exact_ad_conflicts(
     $table = $wpdb->prefix
         . 'nwmd_ads';
 
-    $wpdb->query(
+    $paused = $wpdb->query(
         $wpdb->prepare(
             "UPDATE {$table}
             SET
@@ -458,6 +460,8 @@ function nwmd_directory_pause_exact_ad_conflicts(
             absint($ad_id)
         )
     );
+
+    return false !== $paused;
 }
 
 /**
@@ -752,6 +756,17 @@ function nwmd_directory_save_advertisement() {
 
     $table = $wpdb->prefix
         . 'nwmd_ads';
+    $using_transaction = 'active' === $status;
+
+    if (
+        $using_transaction &&
+        false === $wpdb->query('START TRANSACTION')
+    ) {
+        nwmd_directory_redirect_advertising_admin(
+            'ad-save-failed',
+            $ad_id
+        );
+    }
 
     if ($ad_id > 0) {
         $saved = $wpdb->update(
@@ -787,17 +802,44 @@ function nwmd_directory_save_advertisement() {
         }
     }
 
-    if (false === $saved) {
+    if (false === $saved || $ad_id < 1) {
+        if ($using_transaction) {
+            $wpdb->query('ROLLBACK');
+        }
+
         nwmd_directory_redirect_advertising_admin(
             'ad-save-failed',
             $ad_id
         );
     }
 
-    nwmd_directory_pause_exact_ad_conflicts(
-        $data,
-        $ad_id
-    );
+    if (
+        !nwmd_directory_pause_exact_ad_conflicts(
+            $data,
+            $ad_id
+        )
+    ) {
+        if ($using_transaction) {
+            $wpdb->query('ROLLBACK');
+        }
+
+        nwmd_directory_redirect_advertising_admin(
+            'ad-save-failed',
+            $ad_id
+        );
+    }
+
+    if (
+        $using_transaction &&
+        false === $wpdb->query('COMMIT')
+    ) {
+        $wpdb->query('ROLLBACK');
+
+        nwmd_directory_redirect_advertising_admin(
+            'ad-save-failed',
+            $ad_id
+        );
+    }
 
     delete_transient(
         'nwmd_directory_ads_expiry_checked'

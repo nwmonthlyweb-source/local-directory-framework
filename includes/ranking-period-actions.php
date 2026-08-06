@@ -203,7 +203,16 @@ function nwmd_directory_update_ranking_period_status() {
 
     if ('published' === $target_status) {
 
-        $wpdb->query('START TRANSACTION');
+        $transaction_started = $wpdb->query(
+            'START TRANSACTION'
+        );
+
+        if (false === $transaction_started) {
+            nwmd_directory_redirect_ranking_period_admin(
+                'ranking-period-update-failed',
+                $period_id
+            );
+        }
 
         $archived = $wpdb->query(
             $wpdb->prepare(
@@ -274,7 +283,16 @@ function nwmd_directory_update_ranking_period_status() {
             );
         }
 
-        $wpdb->query('COMMIT');
+        $committed = $wpdb->query('COMMIT');
+
+        if (false === $committed) {
+            $wpdb->query('ROLLBACK');
+
+            nwmd_directory_redirect_ranking_period_admin(
+                'ranking-period-update-failed',
+                $period_id
+            );
+        }
 
         nwmd_directory_redirect_ranking_period_admin(
             'ranking-period-published',
