@@ -296,6 +296,7 @@ function nwmd_directory_render_operator_admin_page() {
         <?php nwmd_directory_render_operator_action_notice(); ?>
         <?php nwmd_directory_render_ai_state_validation_notice(); ?>
         <?php nwmd_directory_render_ai_state_preview_notice(); ?>
+        <?php nwmd_directory_render_ai_state_import_result_notice(); ?>
 
         <?php if (!empty($status['ready'])) : ?>
             <div class="notice notice-success inline">
@@ -609,6 +610,10 @@ function nwmd_directory_render_operator_admin_page() {
                     ?>
                 </button>
             </form>
+
+            <?php
+            nwmd_directory_render_controlled_ai_state_import_section();
+            ?>
 
             <h2><?php echo esc_html__('Run operator', 'local-directory-framework'); ?></h2>
 
